@@ -1,0 +1,122 @@
+[
+  {
+    "route": "MG Road Metro -> Cubbon Park",
+    "profile": "foot",
+    "turns": 10,
+    "distance_m": 1642,
+    "covered": {
+      "30": 2,
+      "50": 4
+    },
+    "samples": [
+      "Working Class Unbound (artwork, 20m)",
+      "Bangalore Aquarium (aquarium, 33m)",
+      "Jaivik Mall (greengrocer, 24m)"
+    ]
+  },
+  {
+    "route": "Majestic -> Vidhana Soudha",
+    "profile": "foot",
+    "turns": 21,
+    "distance_m": 2751,
+    "covered": {
+      "30": 5,
+      "50": 10
+    },
+    "samples": [
+      "ICICI Bank (atm, 35m)",
+      "ICICI Bank (atm, 33m)",
+      "Majestic Hotel (restaurant, 29m)"
+    ]
+  },
+  {
+    "route": "Indiranagar Metro -> 100 Feet Rd south",
+    "profile": "foot",
+    "turns": 4,
+    "distance_m": 741,
+    "covered": {
+      "30": 4,
+      "50": 4
+    },
+    "samples": [
+      "Pai Electronics (hifi, 18m)",
+      "HOPCOMS (greengrocer, 15m)",
+      "State Bank of India (bank, 11m)"
+    ]
+  },
+  {
+    "route": "Koramangala Sony World -> Forum Mall",
+    "profile": "foot",
+    "turns": 12,
+    "distance_m": 1876,
+    "covered": {
+      "30": 9,
+      "50": 10
+    },
+    "samples": [
+      "Ooty Chocolates (confectionery, 11m)",
+      "Ooty Chocolates (confectionery, 23m)",
+      "Balasubramania Swamy Temple (place_of_worship, 28m)"
+    ]
+  },
+  {
+    "route": "Jayanagar 4th Block -> Lalbagh West Gate",
+    "profile": "foot",
+    "turns": 29,
+    "distance_m": 3858,
+    "covered": {
+      "30": 20,
+      "50": 24
+    },
+    "samples": [
+      "Krishna Bakery (bakery, 25m)",
+      "Krishna Bakery (bakery, 22m)",
+      "Krishna Bakery (bakery, 16m)"
+    ]
+  },
+  {
+    "route": "Malleshwaram 18th Cross -> Mantri Square",
+    "profile": "foot",
+    "turns": 12,
+    "distance_m": 1093,
+    "covered": {
+      "30": 11,
+      "50": 12
+    },
+    "samples": [
+      "Kannika Parameshwari Temple (place_of_worship, 30m)",
+      "Hotel Janatha (restaurant, 21m)",
+      "Hotel Janatha (restaurant, 18m)"
+    ]
+  },
+  {
+    "route": "Shivajinagar Bus Stand -> Commercial St",
+    "profile": "foot",
+    "turns": 6,
+    "distance_m": 1237,
+    "covered": {
+      "30": 4,
+      "50": 6
+    },
+    "samples": [
+      "Abdul Gafoor Masjid (place_of_worship, 32m)",
+      "Allahabad Bank (bank, 16m)",
+      "Bangalore Piles Clinic (clinic, 41m)"
+    ]
+  },
+  {
+    "route": "Bull Temple -> Jayanagar 4th Block",
+    "profile": "foot",
+    "turns": 32,
+    "distance_m": 4672,
+    "covered": {
+      "30": 17,
+      "50": 25
+    },
+    "samples": [
+      "Dodda Ganesha Temple (place_of_worship, 21m)",
+      "Dodda Ganesha Temple (place_of_worship, 34m)",
+      "Veggo Farms (dairy, 20m)"
+    ]
+  }
+]

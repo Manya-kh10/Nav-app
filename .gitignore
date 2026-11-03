@@ -1,0 +1,22 @@
+# Secrets & credentials (NEVER commit)
+.env
+*.env
+
+# Python virtual environment & cache
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Audio clips & raw recordings
+data/clips/
+data/audio_cache/
+*.mp3
+*.m4a
+*.wav
+
+# Overpass API caches & usage logs
+data/overpass_cache/
+data/poi_tiles/
+eval/results/overpass_cache/
+data/usage.jsonl

@@ -1,0 +1,120 @@
+import re
+
+from rapidfuzz import fuzz
+
+_DEVANAGARI = re.compile(r"[\u0900-\u097F]")
+_KANNADA = re.compile(r"[\u0C80-\u0CFF]")
+
+FUZZY_MIN_LEN = 10   # only phrases at least this long get typo tolerance
+FUZZY_SCORE = 90
+
+
+def _collapse(s: str) -> str:
+    """Collapse repeated letters so spelling variants match (kahaan = kahan, theek = thek)."""
+    return re.sub(r"(\w)\1+", r"\1", s)
+
+
+def _norm(text: str) -> str:
+    return _collapse(re.sub(r"[^\w\u0900-\u097F]+", " ", text.lower()).strip())
+
+
+def _s(*words: str) -> set[str]:
+    return {_collapse(w) for w in words}
+
+
+_HINGLISH = _s(
+    "kya", "mujhe", "kahan", "kaha", "kidhar", "kitna", "kitni", "kitne", "mudna", "modna",
+    "mudun", "sahi", "galat", "raste", "rasta", "hoon", "hun", "hu", "hai", "ab", "lagega",
+    "lagegi", "kab", "aap", "mera", "samay", "phir", "dobara", "bolo", "batao", "bataiye",
+    "agla", "pahunch", "rahi", "raha", "theek", "jana", "jaun", "hum", "gaye", "gaya", "gayi",
+    "lena", "chalna", "aur", "manzil",
+)
+
+# order matters: first matching intent wins
+RULES = [
+    ("repeat", [
+        "repeat", "say that again", "say again", "once more", "again", "what did you say",
+        "dobara", "phir se", "ek baar aur", "repeat karo", "फिर से", "दोबारा", "दुबारा",
+    ]),
+    ("arrived_check", [
+        "have i arrived", "have we arrived", "did i arrive", "are we there", "am i there",
+        "pahunch gaye", "pahunch gaya", "pahunch gayi", "pahunch gye", "reach gaye",
+        "reach gaya", "reach gayi", "manzil aa gayi", "manzil aa gaya", "manzil pahunch",
+        "पहुँच गए", "पहुंच गए", "पहुँच गया", "पहुंच गया",
+    ]),
+    ("on_route", [
+        "right track", "right path", "right route", "right way", "right direction",
+        "correct way", "correct route", "on route", "on the route", "on track", "am i lost",
+        "wrong way", "wrong turn", "going the right way",
+        "sahi raste", "sahi rasta", "sahi route", "sahi disha", "sahi direction", "sahi ja",
+        "sahi jaa", "theek raste", "theek ja", "galat raste", "galat rasta", "galat ja",
+        "galat direction", "सही रास्ते", "सही रास्ता", "सही जा", "गलत रास्ते",
+    ]),
+    ("time_left", [
+        "how long", "how much time", "time left", "minutes left", "how many minutes", "eta",
+        "when will i reach", "when do i arrive", "kitna time", "kitni der", "kitna samay",
+        "kab tak", "kab pahunch", "कितना समय", "कितनी देर",
+    ]),
+    ("distance_left", [
+        "how far", "how many meters", "how many metres", "how many km", "how many kilometers",
+        "distance left", "remaining distance", "kitni door", "kitna door", "kitne meter",
+        "kitne km", "कितनी दूर",
+    ]),
+    ("next_turn", [
+        "next turn", "where do i turn", "where should i turn", "where to turn", "which way",
+        "what next", "what now", "next instruction", "turn next", "left or right",
+        "next left", "next right", "kahan mudna", "kahan modna", "kahan mudun",
+        "kidhar mudna", "kidhar modna", "kidhar turn", "kahan turn", "ab mujhe kahan",
+        "agla mod", "ab kya karna", "kya karna hai", "mudna hai", "modna hai",
+        "अगला मोड़", "कहाँ मुड़", "कहां मुड़", "किधर मुड़",
+    ]),
+]
+_RULES = [(intent, [_collapse(p.lower()) for p in phrases]) for intent, phrases in RULES]
+
+# Fallback when no phrase matches: one anchor word from each group is enough.
+# This survives small speech-recognition errors ("turn" heard as "paanch").
+COMBOS = [
+    ("next_turn", _s("kahan", "kidhar", "kaha"),
+     _s("mudna", "modna", "mudun", "modun", "turn", "lena", "lun", "jaun", "jana", "chalna", "mod")),
+    ("next_turn", _s("where"), _s("turn", "go", "next", "left", "right")),
+    ("time_left", _s("kitna", "kitni", "kitne"), _s("time", "der", "samay", "minute", "min")),
+    ("distance_left", _s("kitna", "kitni", "kitne"), _s("door", "dur", "meter", "km", "kilometer")),
+    ("on_route", _s("sahi", "theek", "galat"),
+     _s("raste", "rasta", "route", "ja", "jana", "jaa", "disha", "direction", "side", "taraf")),
+]
+
+
+def _has(norm: str, phrase: str) -> bool:
+    if not phrase.isascii():
+        return phrase in norm
+    if f" {phrase} " in f" {norm} ":
+        return True
+    if len(phrase) >= FUZZY_MIN_LEN:
+        return fuzz.partial_ratio(phrase, norm) >= FUZZY_SCORE
+    return False
+
+
+def detect_lang(text: str, norm: str) -> str:
+    if _KANNADA.search(text):
+        return "kn"
+    if _DEVANAGARI.search(text):
+        return "hinglish"
+    if set(norm.split()) & _HINGLISH:
+        return "hinglish"
+    return "en"
+
+
+def classify(text: str) -> tuple[str, str]:
+    """Return (intent, lang). lang is en, hinglish or kn."""
+    norm = _norm(text)
+    lang = detect_lang(text, norm)
+    if lang == "kn":
+        return "unsupported_language", lang
+    for intent, phrases in _RULES:
+        if any(_has(norm, p) for p in phrases):
+            return intent, lang
+    tokens = set(norm.split())
+    for intent, group_a, group_b in COMBOS:
+        if tokens & group_a and tokens & group_b:
+            return intent, lang
+    return "unknown", lang
