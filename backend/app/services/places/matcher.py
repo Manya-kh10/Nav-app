@@ -5,7 +5,7 @@ from rapidfuzz import fuzz, process
 
 from app.core.config import ROOT
 from app.schemas.places import Place
-from app.services.places.aliases import get_aliases_for_entry, resolve_query_alias
+from app.services.places.aliases import get_aliases_for_entry, resolve_query_alias, get_kannada_name
 from app.services.places.translit import to_latin
 
 MIN_SCORE = 62.0
@@ -187,8 +187,10 @@ class PlaceIndex:
                 area = self._nearest_area(e["lat"], e["lon"])
                 if area and make_key(tokens_of(area)) != k:
                     disp += f", near {area}"
+            name_kn = get_kannada_name(name, e.get("name_kn"))
             out.append(Place(name=name, display_name=disp, lat=e["lat"], lon=e["lon"],
-                             category="local", type=kind, score=round(sc, 1), source="local"))
+                             category="local", type=kind, score=round(sc, 1), source="local",
+                             name_kn=name_kn))
             if len(out) >= limit:
                 break
         return out

@@ -57,5 +57,12 @@ def test_colloquial_aliases():
     assert names("के आर मार्केट")[0] == "Krishna Rajendra Market"
 
 
+def test_kannada_name_populated():
+    res = IDX.search("Halasuru", 1)
+    assert res[0].name_kn == "ಹಲಸೂರು"
+    res = IDX.search("Kempegowda Bus Station", 1)
+    assert res[0].name_kn == "ಕೆಂಪೇಗೌಡ ಬಸ್ ನಿಲ್ದಾಣ"
+
+
 def test_nonsense_returns_nothing():
     assert names("qqqqqq") == []

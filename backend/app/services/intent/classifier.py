@@ -15,7 +15,7 @@ def _collapse(s: str) -> str:
 
 
 def _norm(text: str) -> str:
-    return _collapse(re.sub(r"[^\w\u0900-\u097F]+", " ", text.lower()).strip())
+    return _collapse(re.sub(r"[^\w\u0900-\u097F\u0C80-\u0CFF]+", " ", text.lower()).strip())
 
 
 def _s(*words: str) -> set[str]:
@@ -30,17 +30,26 @@ _HINGLISH = _s(
     "lena", "chalna", "aur", "manzil",
 )
 
+_KANGLISH = _s(
+    "munde", "elli", "tiruga", "tirugabeku", "yava", "kade", "doora", "eshtu", "hottu",
+    "samaya", "nimisha", "dari", "sari", "sariyada", "tappu", "talupiddheva", "talupidheva",
+    "talupidena", "bantha", "banta", "matte", "heli", "hogabeku", "muttidheva", "innomme",
+)
+
 # order matters: first matching intent wins
 RULES = [
     ("repeat", [
         "repeat", "say that again", "say again", "once more", "again", "what did you say",
         "dobara", "phir se", "ek baar aur", "repeat karo", "फिर से", "दोबारा", "दुबारा",
+        "ಮತ್ತೆ ಹೇಳಿ", "ಇನ್ನೊಮ್ಮೆ ಹೇಳಿ", "ಮತ್ತೊಮ್ಮೆ ಹೇಳಿ", "ಏನ್ ಹೇಳಿದ್ರಿ", "matte heli", "innomme heli",
     ]),
     ("arrived_check", [
         "have i arrived", "have we arrived", "did i arrive", "are we there", "am i there",
         "pahunch gaye", "pahunch gaya", "pahunch gayi", "pahunch gye", "reach gaye",
         "reach gaya", "reach gayi", "manzil aa gayi", "manzil aa gaya", "manzil pahunch",
         "पहुँच गए", "पहुंच गए", "पहुँच गया", "पहुंच गया",
+        "ತಲುಪಿದ್ದೇವಾ", "ತಲುಪಿದೆವಾ", "ಮುಟ್ಟಿದ್ದೇವಾ", "ತಲುಪಿದಿವಾ", "ಬಂತಾ", "ಜಾಗ ಬಂತಾ",
+        "talupiddheva", "talupidheva", "bantha", "jaaga bantha",
     ]),
     ("on_route", [
         "right track", "right path", "right route", "right way", "right direction",
@@ -49,16 +58,22 @@ RULES = [
         "sahi raste", "sahi rasta", "sahi route", "sahi disha", "sahi direction", "sahi ja",
         "sahi jaa", "theek raste", "theek ja", "galat raste", "galat rasta", "galat ja",
         "galat direction", "सही रास्ते", "सही रास्ता", "सही जा", "गलत रास्ते",
+        "ಸರಿಯಾದ ದಾರಿ", "ಸರಿ ದಾರಿ", "ಸರಿಯಾದ ಮಾರ್ಗ", "ಸರಿ ದಾರಿನಾ", "ತಪ್ಪು ದಾರಿ",
+        "sariyada dari", "sari dari", "tappu dari", "sariyada marga",
     ]),
     ("time_left", [
         "how long", "how much time", "time left", "minutes left", "how many minutes", "eta",
         "when will i reach", "when do i arrive", "kitna time", "kitni der", "kitna samay",
         "kab tak", "kab pahunch", "कितना समय", "कितनी देर",
+        "ಎಷ್ಟು ಸಮಯ", "ಎಷ್ಟು ಹೊತ್ತು", "ಎಷ್ಟು ನಿಮಿಷ", "ಎಷ್ಟು ಟೈಮ್",
+        "eshtu samaya", "eshtu hottu", "eshtu nimisha", "eshtu time",
     ]),
     ("distance_left", [
         "how far", "how many meters", "how many metres", "how many km", "how many kilometers",
         "distance left", "remaining distance", "kitni door", "kitna door", "kitne meter",
         "kitne km", "कितनी दूर",
+        "ಎಷ್ಟು ದೂರ", "ಇನ್ನು ಎಷ್ಟು ದೂರ", "ಎಷ್ಟು ಮೀಟರ್", "ಎಷ್ಟು ಕಿಮಿ",
+        "eshtu doora", "innu eshtu doora", "eshtu meter", "eshtu km",
     ]),
     ("next_turn", [
         "next turn", "where do i turn", "where should i turn", "where to turn", "which way",
@@ -67,6 +82,8 @@ RULES = [
         "kidhar mudna", "kidhar modna", "kidhar turn", "kahan turn", "ab mujhe kahan",
         "agla mod", "ab kya karna", "kya karna hai", "mudna hai", "modna hai",
         "अगला मोड़", "कहाँ मुड़", "कहां मुड़", "किधर मुड़",
+        "ಮುಂದೆ ಎಲ್ಲಿ ತಿರುಗಬೇಕು", "ಎಲ್ಲಿ ತಿರುಗಬೇಕು", "ಮುಂದಿನ ತಿರುವು", "ಮುಂದೆ ಏನು", "ಎಲ್ಲಿ ಹೋಗಬೇಕು", "ಯಾವ ಕಡೆ",
+        "munde elli tirugabeku", "elli tirugabeku", "munde enu", "yava kade", "elli hogabeku",
     ]),
 ]
 _RULES = [(intent, [_collapse(p.lower()) for p in phrases]) for intent, phrases in RULES]
@@ -77,10 +94,16 @@ COMBOS = [
     ("next_turn", _s("kahan", "kidhar", "kaha"),
      _s("mudna", "modna", "mudun", "modun", "turn", "lena", "lun", "jaun", "jana", "chalna", "mod")),
     ("next_turn", _s("where"), _s("turn", "go", "next", "left", "right")),
+    ("next_turn", _s("elli", "yava", "munde", "ಎಲ್ಲಿ", "ಯಾವ", "ಮುಂದೆ"),
+     _s("tirugabeku", "tiruga", "hogabeku", "hoga", "kade", "ತಿರುಗಬೇಕು", "ತಿರುಗಿ", "ಹೋಗಬೇಕು", "ಕಡೆ", "ತಿರುವು")),
     ("time_left", _s("kitna", "kitni", "kitne"), _s("time", "der", "samay", "minute", "min")),
+    ("time_left", _s("eshtu", "ಎಷ್ಟು"), _s("samaya", "hottu", "nimisha", "time", "ಸಮಯ", "ಹೊತ್ತು", "ನಿಮಿಷ", "ಟೈಮ್")),
     ("distance_left", _s("kitna", "kitni", "kitne"), _s("door", "dur", "meter", "km", "kilometer")),
+    ("distance_left", _s("eshtu", "ಎಷ್ಟು"), _s("doora", "dur", "meter", "km", "ದೂರ", "ಮೀಟರ್", "ಕಿಮಿ")),
     ("on_route", _s("sahi", "theek", "galat"),
      _s("raste", "rasta", "route", "ja", "jana", "jaa", "disha", "direction", "side", "taraf")),
+    ("on_route", _s("sari", "sariyada", "tappu", "ಸರಿ", "ಸರಿಯಾದ", "ತಪ್ಪು"),
+     _s("dari", "dharina", "marga", "raste", "route", "ದಾರಿ", "ದಾರಿನಾ", "ಮಾರ್ಗ", "ರಸ್ತೆ")),
 ]
 
 
@@ -97,6 +120,8 @@ def _has(norm: str, phrase: str) -> bool:
 def detect_lang(text: str, norm: str) -> str:
     if _KANNADA.search(text):
         return "kn"
+    if set(norm.split()) & _KANGLISH:
+        return "kn"
     if _DEVANAGARI.search(text):
         return "hinglish"
     if set(norm.split()) & _HINGLISH:
@@ -108,8 +133,6 @@ def classify(text: str) -> tuple[str, str]:
     """Return (intent, lang). lang is en, hinglish or kn."""
     norm = _norm(text)
     lang = detect_lang(text, norm)
-    if lang == "kn":
-        return "unsupported_language", lang
     for intent, phrases in _RULES:
         if any(_has(norm, p) for p in phrases):
             return intent, lang

@@ -11,3 +11,4 @@ class Place(BaseModel):
     importance: float | None = None
     score: float | None = None     # 0-100 match score against what was typed or said
     source: str | None = None      # "local" or "online"
+    name_kn: str | None = None     # Kannada script name

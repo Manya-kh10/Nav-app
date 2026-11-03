@@ -45,6 +45,7 @@
         <div class="row sim">
             <button id="sim-walk" disabled>Simulate walk</button>
             <button id="sim-wrong" disabled>Simulate wrong turn</button>
+            <button id="gps-live" disabled>Live GPS</button>
             <button id="sim-stop" disabled>Stop</button>
         </div>
         <div id="status" role="status"></div>
@@ -53,8 +54,9 @@
     <div id="map"></div>
 
     <section class="panel" id="nav">
-        <div id="nav-next">Get a route, then start a simulation.</div>
+        <div id="nav-next">Get a route, then start navigation or simulation.</div>
         <div id="nav-meta"></div>
+        <button id="passenger-card-btn" class="passenger-card-btn" style="display:none;">🪪 Auto / Driver Card (Kannada)</button>
         <div class="row chat">
             <input id="chat-input" placeholder="Ask: next turn? am I on route? kitna time lagega?">
             <button id="chat-send">Ask</button>
@@ -67,6 +69,27 @@
         <div id="summary"></div>
         <ol id="steps"></ol>
     </section>
+
+    <!-- Passenger / Driver Card Modal -->
+    <div id="passenger-modal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span class="modal-badge">Auto / Cab Driver Card · ಆಟೋ / ಕ್ಯಾಬ್</span>
+                <button id="modal-close" class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="driver-lead">ದಯವಿಟ್ಟು ಇಲ್ಲಿಗೆ ಕರೆದುಕೊಂಡು ಹೋಗಿ (Please take me to):</div>
+                <div id="card-kn" class="kannada-dest"></div>
+                <div id="card-en" class="english-dest"></div>
+                <div id="card-landmark" class="landmark-dest" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="card-speak-btn" class="speak-dest-btn">
+                    🔊 ಧ್ವನಿಯಲ್ಲಿ ಹೇಳಿ (Speak in Kannada)
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script type="module" src="/js/app.js"></script>

@@ -1,8 +1,9 @@
 import { searchPlaces, getGuide, sendPosition, sendReroute, sendChat } from "./api.js";
 import { initMap, drawRoute, moveUser, clearUser } from "./map.js";
 import { startSimulation } from "./sim.js";
+import { startGpsTracking } from "./gps.js";
 
-const state = { from: null, to: null, guide: null, sim: null };
+const state = { from: null, to: null, guide: null, sim: null, gps: null };
 const $ = (id) => document.getElementById(id);
 const status = (msg) => { $("status").textContent = msg || ""; };
 
@@ -36,7 +37,7 @@ function setupPicker(key) {
                     : shortName(p);
                 b.appendChild(small);
                 b.addEventListener("click", () => {
-                    state[key] = { lat: p.lat, lon: p.lon, name: p.name };
+                    state[key] = { lat: p.lat, lon: p.lon, name: p.name, name_kn: p.name_kn };
                     chosen.textContent = `Selected: ${p.name}`;
                     list.textContent = "";
                 });
@@ -80,6 +81,7 @@ function setSimButtons(running) {
     const has = !!state.guide;
     $("sim-walk").disabled = !has || running;
     $("sim-wrong").disabled = !has || running;
+    $("gps-live").disabled = !has || running;
     $("sim-stop").disabled = !running;
 }
 
@@ -89,17 +91,21 @@ function navLog(msg) {
     $("nav-log").prepend(li);
 }
 
-function stopSim() {
+function stopTracking() {
     if (state.sim) {
         state.sim.stop();
         state.sim = null;
+    }
+    if (state.gps) {
+        state.gps.stop();
+        state.gps = null;
     }
     setSimButtons(false);
 }
 
 function runSim(wrong) {
     if (!state.guide) return;
-    stopSim();
+    stopTracking();
     clearUser();
     $("nav-log").textContent = "";
     navLog(wrong ? "Started: walking with a wrong turn" : "Started: walking the route");
@@ -141,15 +147,97 @@ function runSim(wrong) {
     setSimButtons(true);
 }
 
+function runLiveGps() {
+    if (!state.guide) return;
+    stopTracking();
+    clearUser();
+    $("nav-log").textContent = "";
+    navLog("Started: Live GPS tracking");
+
+    state.gps = startGpsTracking({
+        sessionId: state.guide.session_id,
+        api: { position: sendPosition, reroute: sendReroute },
+        onTick: ({ lat, lon, status: s, accuracy }) => {
+            moveUser(lat, lon);
+            $("nav-next").textContent = s.on_route
+                ? (s.next_text || "")
+                : "You are off the route. Finding a new one...";
+            $("nav-meta").textContent =
+                `${distText(s.remaining_m)} left, about ${Math.round(s.remaining_s / 60)} min` +
+                (s.on_route ? "" : `, ${Math.round(s.distance_from_route_m)} m off route`) +
+                ` (GPS ±${Math.round(accuracy)}m)`;
+        },
+        onReroute: (res) => {
+            state.guide = res;
+            renderGuide(res);
+            const here = res.route.geometry[0];
+            drawRoute(res.route, { lat: here[0], lon: here[1] }, state.to, false);
+            navLog(`Rerouted: ${res.message}`);
+        },
+        onEnd: () => {
+            navLog("Arrived.");
+            $("nav-next").textContent = "You have arrived.";
+            state.gps = null;
+            setSimButtons(false);
+        },
+        onError: (msg) => {
+            navLog(`GPS Error: ${msg}`);
+            status(msg);
+            state.gps = null;
+            setSimButtons(false);
+        },
+    });
+    setSimButtons(true);
+}
+
+function openPassengerCard() {
+    if (!state.to) return;
+    const knName = state.to.name_kn || state.to.name;
+    $("card-kn").textContent = knName;
+    $("card-en").textContent = state.to.name;
+
+    let lmText = "";
+    if (state.guide && state.guide.instructions) {
+        for (const ins of state.guide.instructions) {
+            if (ins.landmark) {
+                lmText = `${ins.landmark} ಹತ್ತಿರ (Near ${ins.landmark})`;
+            }
+        }
+    }
+    const lmEl = $("card-landmark");
+    if (lmText) {
+        lmEl.textContent = lmText;
+        lmEl.style.display = "inline-block";
+    } else {
+        lmEl.style.display = "none";
+    }
+
+    $("passenger-modal").classList.remove("hidden");
+}
+
+function closePassengerCard() {
+    $("passenger-modal").classList.add("hidden");
+}
+
+function speakToDriver() {
+    if (!state.to) return;
+    const knName = state.to.name_kn || state.to.name;
+    const phrase = `ನಮಸ್ಕಾರ, ನಾನು ${knName}ಗೆ ಹೋಗಬೇಕು.`;
+    window.dispatchEvent(new CustomEvent("speak-text", {
+        detail: { text: phrase, lang: "kn-IN" }
+    }));
+}
+
 async function onGo() {
     if (!state.from || !state.to) {
         status("Pick both a start and a destination first.");
         return;
     }
-    stopSim();
+    stopTracking();
     clearUser();
     state.guide = null;
     setSimButtons(false);
+    $("passenger-card-btn").style.display = "none";
     status("Getting route...");
     $("steps").textContent = "";
     $("summary").textContent = "";
@@ -165,6 +253,7 @@ async function onGo() {
         renderGuide(guide);
         $("nav-next").textContent = guide.instructions[0]?.text || "";
         $("nav-meta").textContent = "";
+        $("passenger-card-btn").style.display = "inline-block";
         setSimButtons(false);
         status(guide.landmarks_status === "unavailable"
             ? "Landmark data unavailable right now; showing plain directions."
@@ -180,7 +269,14 @@ setupPicker("to");
 $("go").addEventListener("click", onGo);
 $("sim-walk").addEventListener("click", () => runSim(false));
 $("sim-wrong").addEventListener("click", () => runSim(true));
-$("sim-stop").addEventListener("click", stopSim);
+$("gps-live").addEventListener("click", runLiveGps);
+$("sim-stop").addEventListener("click", stopTracking);
+$("passenger-card-btn").addEventListener("click", openPassengerCard);
+$("modal-close").addEventListener("click", closePassengerCard);
+$("passenger-modal").addEventListener("click", (e) => {
+    if (e.target.id === "passenger-modal") closePassengerCard();
+});
+$("card-speak-btn").addEventListener("click", speakToDriver);
 
 async function onAsk() {
     const input = $("chat-input");

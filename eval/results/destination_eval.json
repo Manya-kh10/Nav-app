@@ -1,9 +1,9 @@
 {
-  "timestamp": 1793740820.6995273,
+  "timestamp": 1793741657.178609,
   "total": 11,
   "top1_accuracy_pct": 100.0,
   "top3_accuracy_pct": 100.0,
-  "mean_search_latency_ms": 983.5,
+  "mean_search_latency_ms": 143.2,
   "cases": [
     {
       "id": "place1",
@@ -16,7 +16,7 @@
       "score": 93.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 3681.2,
+      "search_ms": 1101.4,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -32,7 +32,7 @@
       "score": 100.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 715.6,
+      "search_ms": 76.0,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -48,7 +48,7 @@
       "score": 100.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 381.3,
+      "search_ms": 28.1,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -64,7 +64,7 @@
       "score": 100.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 280.3,
+      "search_ms": 25.2,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -80,7 +80,7 @@
       "score": 100.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 1221.4,
+      "search_ms": 39.1,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -96,7 +96,7 @@
       "score": 100.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 2341.3,
+      "search_ms": 53.6,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -112,7 +112,7 @@
       "score": 100.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 880.6,
+      "search_ms": 43.8,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -128,7 +128,7 @@
       "score": 100.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 517.9,
+      "search_ms": 69.5,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -144,7 +144,7 @@
       "score": 100.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 477.6,
+      "search_ms": 41.2,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -160,7 +160,7 @@
       "score": 89.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 118.7,
+      "search_ms": 48.9,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null
@@ -176,7 +176,7 @@
       "score": 100.0,
       "rank": 1,
       "stt_ms": null,
-      "search_ms": 202.6,
+      "search_ms": 48.8,
       "is_top1": true,
       "is_top3": true,
       "stt_error": null

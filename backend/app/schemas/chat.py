@@ -10,6 +10,6 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     intent: str
-    lang: Literal["en", "hinglish"]
+    lang: Literal["en", "hinglish", "kn"]
     text: str
     has_location: bool

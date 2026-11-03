@@ -92,6 +92,29 @@ PROMINENT_PLACES: list[dict] = [
     },
 ]
 
+# Canonical Kannada name dictionary for high-frequency destinations
+CANONICAL_KN: dict[str, str] = {
+    "Indiranagar Metro Station": "ಇಂದಿರಾನಗರ ಮೆಟ್ರೋ ನಿಲ್ದಾಣ",
+    "Indiranagar": "ಇಂದಿರಾನಗರ",
+    "Kempegowda Bus Station": "ಕೆಂಪೇಗೌಡ ಬಸ್ ನಿಲ್ದಾಣ",
+    "Nadaprabhu Kempegowda Station, Majestic": "ಮೆಜೆಸ್ಟಿಕ್ ಮೆಟ್ರೋ ನಿಲ್ದಾಣ",
+    "Krishna Rajendra Market": "ಕೃಷ್ಣರಾಜೇಂದ್ರ ಮಾರುಕಟ್ಟೆ",
+    "KR Market Bus Terminus": "ಕೃಷ್ಣರಾಜೇಂದ್ರ ಮಾರುಕಟ್ಟೆ ಬಸ್ ನಿಲ್ದಾಣ",
+    "Central Silk Board": "ಸೆಂಟ್ರಲ್ ಸಿಲ್ಕ್ ಬೋರ್ಡ್",
+    "Sir Puttanna Chetty Town Hall": "ಪುಟ್ಟಣ್ಣ ಚೆಟ್ಟಿ ಪುರಭವನ",
+    "Bangalore Palace": "ಬೆಂಗಳೂರು ಅರಮನೆ",
+    "Mahatma Gandhi Road": "ಎಂ ಜಿ ರಸ್ತೆ ಮೆಟ್ರೋ ನಿಲ್ದಾಣ",
+    "Nexus Koramangala": "ನೆಕ್ಸಸ್ ಕೋರಮಂಗಲ (ಫೋರಂ ಮಾಲ್)",
+    "Forum Mall": "ಫೋರಂ ಮಾಲ್ ಕೋರಮಂಗಲ",
+    "Koramangala": "ಕೋರಮಂಗಲ",
+    "Halasuru": "ಹಲಸೂರು",
+    "Cubbon Park": "ಕಬ್ಬನ್ ಪಾರ್ಕ್",
+    "Lalbagh": "ಲಾಲ್‌ಬಾಗ್",
+    "Malleshwaram": "ಮಲ್ಲೇಶ್ವರಂ",
+    "Jayanagar": "ಜಯನಗರ",
+    "Shivajinagar": "ಶಿವಾಜಿನಗರ",
+}
+
 
 def get_aliases_for_entry(name: str) -> list[str]:
     """Return colloquial aliases for a given POI entry name."""
@@ -107,3 +130,15 @@ def get_aliases_for_entry(name: str) -> list[str]:
 def resolve_query_alias(norm_key: str) -> str | None:
     """If the normalized key matches a colloquial alias, return canonical search target."""
     return QUERY_ALIASES.get(norm_key)
+
+
+def get_kannada_name(name: str, fallback_kn: str | None = None) -> str | None:
+    """Return authentic Kannada name for a destination if available."""
+    if fallback_kn:
+        return fallback_kn
+    if not name:
+        return None
+    for k, kn in CANONICAL_KN.items():
+        if k.lower() in name.lower() or name.lower() in k.lower():
+            return kn
+    return None

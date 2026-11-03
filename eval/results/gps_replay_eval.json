@@ -1,0 +1,38 @@
+[
+  {
+    "scenario": "Indiranagar Walk (Normal)",
+    "wrong_turn": false,
+    "total_ticks": 37,
+    "off_route_ticks": 0,
+    "reroute_triggered": false,
+    "reroute_latency_ms": null,
+    "arrived": true
+  },
+  {
+    "scenario": "Indiranagar Walk (Deviation)",
+    "wrong_turn": true,
+    "total_ticks": 46,
+    "off_route_ticks": 10,
+    "reroute_triggered": true,
+    "reroute_latency_ms": 708.8,
+    "arrived": true
+  },
+  {
+    "scenario": "MG Road to Cubbon Park (Normal)",
+    "wrong_turn": false,
+    "total_ticks": 82,
+    "off_route_ticks": 0,
+    "reroute_triggered": false,
+    "reroute_latency_ms": null,
+    "arrived": true
+  },
+  {
+    "scenario": "MG Road to Cubbon Park (Deviation)",
+    "wrong_turn": true,
+    "total_ticks": 90,
+    "off_route_ticks": 14,
+    "reroute_triggered": true,
+    "reroute_latency_ms": 756.9,
+    "arrived": true
+  }
+]
