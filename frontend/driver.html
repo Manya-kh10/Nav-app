@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Driver Mode | Bangalore Voice Nav</title>
+    <link rel="stylesheet" href="/css/driver.css">
+</head>
+<body>
+    <!-- Regulatory Notice Bar -->
+    <div class="regulatory-bar">
+        <strong>SAFETY NOTICE:</strong> Mount phone on dashboard before driving. Do not touch phone while car is moving.
+        (Motor Vehicles Driving Regulations 2020, Reg 37 · Not legal advice)
+    </div>
+
+    <!-- WakeLock / Backgrounded Warning Banner -->
+    <div id="warning-banner" class="warning-banner">
+        ⚠️ SCREEN LOST / APP BACKGROUNDED — KEEP APP OPEN ON DASHBOARD
+    </div>
+
+    <!-- =========================================================
+         SETUP SCREEN (Available when stopped < 8 km/h or before start)
+         ========================================================= -->
+    <main id="setup-screen">
+        <header class="setup-header">
+            <h1>🚗 Driver Mode</h1>
+            <a href="/index.html">← Passenger / Map View</a>
+        </header>
+
+        <div class="field-group">
+            <label for="from-input">Start Location</label>
+            <div class="input-row">
+                <input id="from-input" placeholder="Current Location (GPS) or search..." value="Current GPS Location">
+                <button id="from-search" type="button">Search</button>
+            </div>
+            <div id="from-chosen" class="stat-lbl"></div>
+            <div id="from-results" class="picker-results"></div>
+        </div>
+
+        <div class="field-group">
+            <label for="to-input">Destination</label>
+            <div class="input-row">
+                <input id="to-input" placeholder="e.g. Indiranagar Metro, Silk Board...">
+                <button id="to-search" type="button">Search</button>
+            </div>
+            <div id="to-chosen" class="stat-lbl"></div>
+            <div id="to-results" class="picker-results"></div>
+        </div>
+
+        <div class="field-group">
+            <label for="driver-lang">Voice Guidance Language</label>
+            <div class="input-row">
+                <select id="driver-lang">
+                    <option value="en">English (Voice Nav)</option>
+                    <option value="hinglish">Hindi / Hinglish (Voice Nav)</option>
+                    <option value="kn">Kannada (Voice Nav - Preview)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="route-preview-card" id="route-preview" style="display:none;">
+            <div>
+                <div class="stat-val" id="prev-dist">--</div>
+                <div class="stat-lbl">Distance</div>
+            </div>
+            <div>
+                <div class="stat-val" id="prev-time">--</div>
+                <div class="stat-lbl">Est. Time</div>
+            </div>
+            <div>
+                <div class="stat-val" id="prev-traffic">--</div>
+                <div class="stat-lbl">Traffic</div>
+            </div>
+            <div>
+                <div class="stat-val" id="prev-turns">--</div>
+                <div class="stat-lbl">Maneuvers</div>
+            </div>
+        </div>
+
+        <button id="btn-start-drive" class="btn-start-drive" disabled>
+            START DRIVING
+        </button>
+
+        <div id="setup-status" class="stat-lbl" style="text-align:center; color:#ffab00;">
+            Enter destination and select a route to start.
+        </div>
+
+        <div class="legal-card">
+            <strong>India Motor Vehicles (Driving) Regulations 2020 (reg. 37):</strong>
+            Use of handheld navigation devices while driving is prohibited. Phone must be fixed in a dashboard mount prior to vehicle motion.
+            Bangalore Voice Nav automatically locks non-essential controls when moving above 8 km/h.
+            <div style="margin-top:6px; color:#888;">
+                Traffic data © TomTom · Privacy: route endpoints and coordinates are processed by the traffic provider for real-time delay calculations.
+            </div>
+        </div>
+    </main>
+
+    <!-- =========================================================
+         ACTIVE DRIVING HUD
+         ========================================================= -->
+    <main id="driving-screen" style="display:none;">
+        <div id="lockout-banner" class="lockout-banner">
+            🔒 DRIVING LOCKOUT ACTIVE (> 8 km/h) · Voice-Only Guidance
+        </div>
+
+        <!-- Top HUD Bar: Speed, GPS status, WakeLock, Traffic -->
+        <header class="hud-top">
+            <div class="speed-meter">
+                <span id="hud-speed">0</span><span class="speed-unit">km/h</span>
+            </div>
+            <div class="hud-status-badges">
+                <span id="badge-traffic" class="status-badge">TRAFFIC --</span>
+                <span id="badge-wakelock" class="status-badge active">LOCK 🔒</span>
+                <span id="badge-gps" class="status-badge active">GPS OK</span>
+            </div>
+        </header>
+
+        <!-- Center Hero: Turn Arrow, Distance, Instruction -->
+        <section class="hud-center">
+            <div class="maneuver-icon-wrap" id="hud-maneuver-icon">
+                <!-- Dynamic SVG inserted via JS -->
+            </div>
+            <div class="distance-hero" id="hud-distance">--</div>
+            <div class="instruction-line" id="hud-instruction">Drive to destination</div>
+            <div class="landmark-pill" id="hud-landmark" style="display:none;"></div>
+        </section>
+
+        <!-- Bottom Trip Stats: ETA and Remaining Dist -->
+        <section class="hud-bottom-stats">
+            <div class="hud-stat">
+                <div class="hud-stat-val" id="hud-eta">-- min</div>
+                <div class="hud-stat-lbl">Remaining Time</div>
+            </div>
+            <div class="hud-stat">
+                <div class="hud-stat-val" id="hud-remaining-dist">-- km</div>
+                <div class="hud-stat-lbl">Distance Left</div>
+            </div>
+        </section>
+
+        <!-- Three Huge Hands-Free Dashboard Buttons -->
+        <footer class="hud-actions">
+            <button id="btn-repeat" class="hud-btn btn-repeat" type="button" title="Repeat last direction">
+                <span class="hud-btn-icon">↺</span>
+                <span>REPEAT</span>
+            </button>
+            <button id="btn-ask" class="hud-btn btn-ask" type="button" title="Ask a voice question">
+                <span class="hud-btn-icon">🎙️</span>
+                <span id="ask-btn-text">ASK</span>
+            </button>
+            <button id="btn-mute" class="hud-btn btn-mute" type="button" title="Mute voice announcements">
+                <span class="hud-btn-icon" id="mute-icon">🔊</span>
+                <span id="mute-text">VOICE</span>
+            </button>
+        </footer>
+    </main>
+
+    <script type="module" src="/js/driver.js"></script>
+</body>
+</html>
+

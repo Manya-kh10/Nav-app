@@ -90,3 +90,24 @@ def test_kannada_answers():
     assert res.lang == "kn"
     assert res.intent == "next_turn"
     assert "ಎಡಕ್ಕೆ ತಿರುಗಿ" in res.text
+
+
+def test_driver_mode_answers():
+    s = _mock_session()
+
+    # Driver mode: concise single sentence, <= 12 words
+    res = answer(s, "what is the next turn?", driver_mode=True)
+    assert len(res.text.split()) <= 12
+    assert res.text.count(".") == 1
+    assert "left" in res.text.lower()
+
+    # Hinglish driver question
+    res = answer(s, "kitna time lagega?", driver_mode=True)
+    assert res.lang == "hinglish"
+    assert len(res.text.split()) <= 12
+    assert "minute" in res.text.lower()
+
+    # Unknown query in driver mode
+    res = answer(s, "tell me a joke", driver_mode=True)
+    assert len(res.text.split()) <= 12
+

@@ -40,16 +40,17 @@ export function startGpsTracking({
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         const accuracy = pos.coords.accuracy || 10;
+        const speed = (pos.coords.speed !== null && !isNaN(pos.coords.speed) && pos.coords.speed >= 0) ? pos.coords.speed : null;
         const ts = pos.timestamp ? pos.timestamp / 1000 : now / 1000;
 
         busy = true;
         lastSent = now;
 
         try {
-            const status = await api.position(sessionId, lat, lon, accuracy, ts);
+            const status = await api.position(sessionId, lat, lon, accuracy, ts, speed);
             if (stopped) return;
 
-            onTick({ lat, lon, status, accuracy });
+            onTick({ lat, lon, status, accuracy, speed });
 
             if (status.needs_reroute) {
                 rerouting = true;

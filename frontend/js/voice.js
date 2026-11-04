@@ -266,4 +266,15 @@ window.addEventListener("speak-text", async (e) => {
   }
 });
 
-export { speak };
+function stopAudio() {
+  if (audioEl) {
+    audioEl.pause();
+    audioEl.currentTime = 0;
+  }
+}
+
+function isSpeaking() {
+  return audioEl && !audioEl.paused && !audioEl.ended;
+}
+
+export { speak, stopAudio, isSpeaking, startRecording, stopRecording, toWav16k, transcribe };

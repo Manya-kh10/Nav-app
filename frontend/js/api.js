@@ -40,11 +40,15 @@ const postJson = (url, body) =>
         body: JSON.stringify(body),
     });
 
-export const sendPosition = (session_id, lat, lon, accuracy_m, timestamp) =>
-    postJson("/api/v1/navigation/position", { session_id, lat, lon, accuracy_m, timestamp });
+export const sendPosition = (session_id, lat, lon, accuracy_m, timestamp, speed_mps = null, lang = null) => {
+    const payload = { session_id, lat, lon, accuracy_m, timestamp };
+    if (speed_mps !== null && speed_mps !== undefined) payload.speed_mps = speed_mps;
+    if (lang) payload.lang = lang;
+    return postJson("/api/v1/navigation/position", payload);
+};
 
 export const sendReroute = (session_id, lat, lon, accuracy_m, timestamp) =>
     postJson("/api/v1/navigation/reroute", { session_id, lat, lon, accuracy_m, timestamp });
 
-export const sendChat = (session_id, message) =>
-    postJson("/api/v1/chat", { session_id, message });
+export const sendChat = (session_id, message, driver_mode = false) =>
+    postJson("/api/v1/chat", { session_id, message, driver_mode });
