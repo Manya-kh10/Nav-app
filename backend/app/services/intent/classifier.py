@@ -27,13 +27,14 @@ _HINGLISH = _s(
     "mudun", "sahi", "galat", "raste", "rasta", "hoon", "hun", "hu", "hai", "ab", "lagega",
     "lagegi", "kab", "aap", "mera", "samay", "phir", "dobara", "bolo", "batao", "bataiye",
     "agla", "pahunch", "rahi", "raha", "theek", "jana", "jaun", "hum", "gaye", "gaya", "gayi",
-    "lena", "chalna", "aur", "manzil",
+    "lena", "chalna", "aur", "manzil", "aage", "band", "halka", "dhoond",
 )
 
 _KANGLISH = _s(
     "munde", "elli", "tiruga", "tirugabeku", "yava", "kade", "doora", "eshtu", "hottu",
     "samaya", "nimisha", "dari", "sari", "sariyada", "tappu", "talupiddheva", "talupidheva",
     "talupidena", "bantha", "banta", "matte", "heli", "hogabeku", "muttidheva", "innomme",
+    "hegide", "ideya", "tada",
 )
 
 # order matters: first matching intent wins
@@ -42,6 +43,28 @@ RULES = [
         "repeat", "say that again", "say again", "once more", "again", "what did you say",
         "dobara", "phir se", "ek baar aur", "repeat karo", "फिर से", "दोबारा", "दुबारा",
         "ಮತ್ತೆ ಹೇಳಿ", "ಇನ್ನೊಮ್ಮೆ ಹೇಳಿ", "ಮತ್ತೊಮ್ಮೆ ಹೇಳಿ", "ಏನ್ ಹೇಳಿದ್ರಿ", "matte heli", "innomme heli",
+    ]),
+    ("incident", [
+        "any incident", "any accidents", "any accident", "any crash", "road closed", "road blocked",
+        "road works", "construction ahead", "accident ahead", "jam ahead",
+        "koi accident", "accident hua hai kya", "road band hai kya", "koi jam hai kya",
+        "koi incident", "traffic jam ahead", "aage koi jam",
+        "ಯಾವುದಾದರೂ ಅಪಘಾತ", "ರಸ್ತೆ ಬಂದ್ ಆಗಿದೆಯಾ", "ಅಪಘಾತವಾಗಿದೆಯಾ", "ಯಾವುದಾದರೂ ಜಾಮ್ ಇದೆಯಾ",
+        "accident aagidiya", "raste band agidiya",
+    ]),
+    ("delay", [
+        "how much delay", "traffic delay", "any delay", "is there any delay", "how late",
+        "kitna delay", "delay kitna hai", "kitna der hoga", "traffic delay kitna hai",
+        "कितना डिले", "कितना लेट", "कितनी देरी",
+        "ಎಷ್ಟು ತಡ", "ಎಷ್ಟು ಡಿಲೇ", "ಡಿಲೇ ಎಷ್ಟಿದೆ", "eshtu delay", "eshtu tada",
+    ]),
+    ("traffic_ahead", [
+        "how is the traffic", "how is traffic", "is there traffic", "traffic condition",
+        "traffic ahead", "any traffic", "traffic update", "traffic report", "is traffic heavy",
+        "traffic kaisa hai", "aage traffic kaisa hai", "traffic kaisa", "aage traffic hai kya",
+        "traffic hai kya", "kitna traffic hai", "traffic kaisa h", "ट्रैफिक कैसा है", "आगे ट्रैफिक कैसा है",
+        "ಟ್ರಾಫಿಕ್ ಹೇಗಿದೆ", "ಟ್ರಾಫಿಕ್ ಇದೆಯಾ", "ಮುಂದೆ ಟ್ರಾಫಿಕ್ ಇದೆಯಾ", "ಟ್ರಾಫಿಕ್ ಪರಿಸ್ಥಿತಿ ಏನು",
+        "traffic hegide", "traffic ideya", "munde traffic ideya",
     ]),
     ("arrived_check", [
         "have i arrived", "have we arrived", "did i arrive", "are we there", "am i there",
@@ -89,8 +112,10 @@ RULES = [
 _RULES = [(intent, [_collapse(p.lower()) for p in phrases]) for intent, phrases in RULES]
 
 # Fallback when no phrase matches: one anchor word from each group is enough.
-# This survives small speech-recognition errors ("turn" heard as "paanch").
 COMBOS = [
+    ("traffic_ahead", _s("traffic"), _s("kaisa", "hai", "ahead", "update", "condition", "status", "kitna", "hegide", "ideya")),
+    ("delay", _s("delay"), _s("kitna", "kitni", "traffic", "how", "much", "eshtu", "tada", "is", "there")),
+    ("incident", _s("accident", "jam", "blocked", "closed"), _s("any", "is", "koi", "ahead", "aage", "band")),
     ("next_turn", _s("kahan", "kidhar", "kaha"),
      _s("mudna", "modna", "mudun", "modun", "turn", "lena", "lun", "jaun", "jana", "chalna", "mod")),
     ("next_turn", _s("where"), _s("turn", "go", "next", "left", "right")),
@@ -120,24 +145,28 @@ def _has(norm: str, phrase: str) -> bool:
 def detect_lang(text: str, norm: str) -> str:
     if _KANNADA.search(text):
         return "kn"
-    if set(norm.split()) & _KANGLISH:
-        return "kn"
     if _DEVANAGARI.search(text):
         return "hinglish"
-    if set(norm.split()) & _HINGLISH:
+    words = set(norm.split())
+    if words & _KANGLISH:
+        return "kn"
+    if words & _HINGLISH:
         return "hinglish"
     return "en"
 
 
 def classify(text: str) -> tuple[str, str]:
-    """Return (intent, lang). lang is en, hinglish or kn."""
     norm = _norm(text)
     lang = detect_lang(text, norm)
+
     for intent, phrases in _RULES:
-        if any(_has(norm, p) for p in phrases):
+        for p in phrases:
+            if _has(norm, p):
+                return intent, lang
+
+    words = set(norm.split())
+    for intent, a, b in COMBOS:
+        if (words & a) and (words & b):
             return intent, lang
-    tokens = set(norm.split())
-    for intent, group_a, group_b in COMBOS:
-        if tokens & group_a and tokens & group_b:
-            return intent, lang
+
     return "unknown", lang

@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     llm_base_url: str = "http://localhost:11434/v1"
     llm_api_key: str = "ollama"
     llm_model_id: str = ""
+    tomtom_api_key: str = ""
+    traffic_daily_cap: int = 400
 
 
 settings = Settings()

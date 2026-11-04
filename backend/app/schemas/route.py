@@ -28,6 +28,17 @@ class Step(BaseModel):
     lon: float
 
 
+class TrafficInfo(BaseModel):
+    travel_time_s: int
+    no_traffic_travel_time_s: int
+    delay_s: int
+    level: str  # none, light, heavy, unknown
+    delay_minutes: int
+    travel_minutes: int
+    spoken_summary: str
+    attribution: str = "Traffic data © TomTom"
+
+
 class Route(BaseModel):
     mode: str
     distance_m: float
@@ -35,6 +46,7 @@ class Route(BaseModel):
     geometry: list[list[float]]   # [[lat, lon], ...]
     steps: list[Step]
     eta_note: str = "Estimate from the routing engine; does not include traffic."
+    traffic: TrafficInfo | None = None
 
 
 class Instruction(BaseModel):
@@ -53,6 +65,8 @@ class Guide(BaseModel):
     instructions: list[Instruction]
     landmarks_status: Literal["ok", "unavailable", "skipped"]
     session_id: str
+    traffic_status: Literal["available", "unavailable", "budget_exceeded", "not_applicable"] = "not_applicable"
+
 
 class RerouteResult(Guide):
     message: str

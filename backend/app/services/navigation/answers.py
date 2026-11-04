@@ -3,8 +3,16 @@ import time
 from app.schemas.chat import ChatResponse
 from app.schemas.route import Step
 from app.services.intent.classifier import classify
+from app.services.navigation.announcer import (
+    AnnouncerConfig,
+    build_driver_instruction,
+    format_spoken_dist,
+    round_spoken_distance,
+)
 from app.services.navigation.sessions import Session
 from app.services.navigation.templates import fmt_dist, live_instruction
+from app.services.traffic.incidents import filter_incidents_on_route
+from app.services.traffic.provider import TrafficLevel
 
 STALE_S = 30  # a position older than this is not used to answer
 ROUNDABOUT = ("roundabout", "rotary", "roundabout turn", "exit roundabout", "exit rotary")
@@ -92,7 +100,7 @@ def _fresh_status(s: Session):
     return s.last_status
 
 
-def answer(s: Session, message: str) -> ChatResponse:
+def answer(s: Session, message: str, driver_mode: bool = False) -> ChatResponse:
     intent, lang = classify(message)
     if lang == "kn":
         reply_lang = "kn"
@@ -114,6 +122,12 @@ def answer(s: Session, message: str) -> ChatResponse:
         return ChatResponse(intent=intent, lang=reply_lang, text=text, has_location=has_loc)
 
     if intent == "unknown":
+        if driver_mode:
+            return reply(pick(
+                "Ask next turn, route status, or time left.",
+                "Agla mod, rasta ya bacha time poochiye.",
+                "ಮುಂದಿನ ತಿರುವು, ದಾರಿ ಅಥವಾ ಸಮಯ ಕೇಳಿ.",
+            ), has_loc=False)
         return reply(pick(
             "I can tell you the next turn, whether you are on the route, how far or how long is left, "
             "or repeat the last answer.",
@@ -145,6 +159,14 @@ def answer(s: Session, message: str) -> ChatResponse:
         ), remember=True)
 
     if intent == "arrived_check":
+        if driver_mode:
+            val, unit = round_spoken_distance(st.remaining_m)
+            d_str = format_spoken_dist(val, unit, reply_lang)
+            return reply(pick(
+                f"Not yet. {d_str} to go.",
+                f"Abhi nahi. {d_str} bache hain.",
+                f"ಇನ್ನೂ ಇಲ್ಲ. ಇನ್ನು {d_str} ಹೋಗಬೇಕು.",
+            ), remember=True)
         return reply(pick(
             f"Not yet. {fmt_dist(st.remaining_m)} to go.",
             f"Abhi nahi. {fmt_dist_hi(st.remaining_m)} aur chalna hai.",
@@ -158,6 +180,14 @@ def answer(s: Session, message: str) -> ChatResponse:
                 "Haan, aap sahi raste par hain.",
                 "ಹೌದು, ನೀವು ಸರಿಯಾದ ದಾರಿಯಲ್ಲಿದ್ದೀರಿ.",
             ), remember=True)
+        if driver_mode:
+            val, unit = round_spoken_distance(st.distance_from_route_m)
+            d_str = format_spoken_dist(val, unit, reply_lang)
+            return reply(pick(
+                f"No, off route by {d_str}.",
+                f"Nahi, route se {d_str} door hain.",
+                f"ಇಲ್ಲ, ದಾರಿಯಿಂದ {d_str} ದೂರದಲ್ಲಿದ್ದೀರಿ.",
+            ), remember=True)
         return reply(pick(
             f"No, you are about {fmt_dist(st.distance_from_route_m)} off the route.",
             f"Nahi, aap route se lagbhag {fmt_dist_hi(st.distance_from_route_m)} door hain.",
@@ -166,6 +196,14 @@ def answer(s: Session, message: str) -> ChatResponse:
 
     if intent == "time_left":
         n = max(1, round(st.remaining_s / 60))
+        if driver_mode:
+            val, unit = round_spoken_distance(st.remaining_m)
+            d_str = format_spoken_dist(val, unit, reply_lang)
+            return reply(pick(
+                f"About {n} minutes and {d_str} to go.",
+                f"Lagbhag {n} minute aur {d_str} bache hain.",
+                f"ಸುಮಾರು {n} ನಿಮಿಷ ಮತ್ತು {d_str} ಬಾಕಿ ಇದೆ.",
+            ), remember=True)
         return reply(pick(
             f"About {n} minutes left, {fmt_dist(st.remaining_m)} to go. This does not include traffic.",
             f"Lagbhag {n} minute bache hain, {fmt_dist_hi(st.remaining_m)} aur chalna hai. "
@@ -175,11 +213,88 @@ def answer(s: Session, message: str) -> ChatResponse:
         ), remember=True)
 
     if intent == "distance_left":
+        if driver_mode:
+            val, unit = round_spoken_distance(st.remaining_m)
+            d_str = format_spoken_dist(val, unit, reply_lang)
+            return reply(pick(
+                f"{d_str} to go.",
+                f"{d_str} bache hain.",
+                f"ಇನ್ನು {d_str} ಹೋಗಬೇಕು.",
+            ), remember=True)
         return reply(pick(
             f"{fmt_dist(st.remaining_m)} to go.",
             f"{fmt_dist_hi(st.remaining_m)} aur chalna hai.",
             f"ಇನ್ನು {fmt_dist_kn(st.remaining_m)} ಹೋಗಬೇಕು.",
         ), remember=True)
+
+    if intent in ("traffic_ahead", "delay", "incident"):
+        tsnap = s.traffic_snapshot
+        if not tsnap or not tsnap.summary:
+            return reply(pick(
+                "Traffic information is not available.",
+                "Traffic ki jaankari uplabdh nahi hai.",
+                "ಟ್ರಾಫಿಕ್ ಮಾಹಿತಿ ಲಭ್ಯವಿಲ್ಲ.",
+            ), remember=True)
+
+        if tsnap.is_stale():
+            return reply(pick(
+                "Traffic information is outdated, checked over 10 minutes ago.",
+                "Traffic data purana hai, 10 minute se zyada purana.",
+                "ಟ್ರಾಫಿಕ್ ಮಾಹಿತಿ ಹಳೆಯದಾಗಿದೆ, 10 ನಿಮಿಷಕ್ಕಿಂತ ಹಿಂದಿನದು.",
+            ), remember=True)
+
+        summary = tsnap.summary
+        age_m = summary.age_minutes()
+        age_en = "just now" if age_m == 0 else f"{age_m} minutes ago"
+        age_hi = "abhi" if age_m == 0 else f"{age_m} minute pehle"
+        age_kn = "ಈಗಷ್ಟೇ" if age_m == 0 else f"{age_m} ನಿಮಿಷದ ಹಿಂದೆ"
+
+        if intent == "traffic_ahead":
+            lvl = summary.level.value
+            delay_m = summary.delay_minutes
+            if lvl == "none" or delay_m == 0:
+                return reply(pick(
+                    f"Traffic is flowing smoothly, checked {age_en}.",
+                    f"Traffic smooth hai, {age_hi} check kiya gaya.",
+                    f"ಟ್ರಾಫಿಕ್ ಸುಗಮವಾಗಿದೆ, {age_kn} ಪರಿಶೀಲಿಸಲಾಗಿದೆ.",
+                ), remember=True)
+            return reply(pick(
+                f"Traffic is {lvl}, about {delay_m} minutes delay, checked {age_en}.",
+                f"Traffic {lvl} hai, lagbhag {delay_m} minute delay hai, {age_hi} check kiya.",
+                f"ಟ್ರಾಫಿಕ್ {lvl} ಆಗಿದೆ, ಸುಮಾರು {delay_m} ನಿಮಿಷ ತಡ, {age_kn} ಪರಿಶೀಲಿಸಲಾಗಿದೆ.",
+            ), remember=True)
+
+        if intent == "delay":
+            delay_m = summary.delay_minutes
+            if delay_m == 0:
+                return reply(pick(
+                    f"No traffic delay, checked {age_en}.",
+                    f"Koi delay nahi hai, {age_hi} check kiya gaya.",
+                    f"ಯಾವುದೇ ತಡವಿಲ್ಲ, {age_kn} ಪರಿಶೀಲಿಸಲಾಗಿದೆ.",
+                ), remember=True)
+            return reply(pick(
+                f"About {delay_m} minutes delay, checked {age_en}.",
+                f"Lagbhag {delay_m} minute ka delay hai, {age_hi} check kiya gaya.",
+                f"ಸುಮಾರು {delay_m} ನಿಮಿಷ ತಡ, {age_kn} ಪರಿಶೀಲಿಸಲಾಗಿದೆ.",
+            ), remember=True)
+
+        if intent == "incident":
+            along_m = (s.route.distance_m - st.remaining_m) if st else 0.0
+            incidents_ahead = filter_incidents_on_route(tsnap.incidents, s.route.geometry, along_m)
+            if not incidents_ahead:
+                return reply(pick(
+                    f"No incidents reported on route, checked {age_en}.",
+                    f"Route par koi incident nahi hai, {age_hi} check kiya.",
+                    f"ದಾರಿಯಲ್ಲಿ ಯಾವುದೇ ಅಪಘಾತ ವರದಿಯಾಗಿಲ್ಲ, {age_kn} ಪರಿಶೀಲಿಸಲಾಗಿದೆ.",
+                ), remember=True)
+            first_inc = incidents_ahead[0]
+            val, unit = round_spoken_distance(first_inc.distance_to_user_m)
+            d_str = format_spoken_dist(val, unit, reply_lang)
+            return reply(pick(
+                f"{first_inc.category} reported {d_str} ahead.",
+                f"{d_str} aage {first_inc.category} reported hai.",
+                f"{d_str} ಮುಂದೆ {first_inc.category} ವರದಿಯಾಗಿದೆ.",
+            ), remember=True)
 
     # next_turn
     if st.next_index is None or st.distance_to_next_m is None:
@@ -198,6 +313,19 @@ def answer(s: Session, message: str) -> ChatResponse:
     step = s.route.steps[st.next_index]
     lm = s.landmarks.get(st.next_index)
     landmark = lm["name"] if lm else None
+
+    if driver_mode:
+        cfg = AnnouncerConfig(enable_kannada_driver=True)
+        text = build_driver_instruction(
+            stage="near",
+            step=step,
+            distance_to_next_m=st.distance_to_next_m,
+            landmark_name=landmark,
+            lang=reply_lang,
+            config=cfg,
+        )
+        return reply(text, remember=True)
+
     if reply_lang == "kn":
         text = next_kannada(step, st.distance_to_next_m, landmark)
     elif reply_lang == "hinglish":

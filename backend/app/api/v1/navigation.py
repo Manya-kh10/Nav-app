@@ -3,18 +3,34 @@ import time
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.nav_state import NavStatus, PositionUpdate
-from app.schemas.route import Guide, GuideRequest, LatLon, RerouteResult, Route, RouteRequest
+from app.schemas.route import (
+    Guide,
+    GuideRequest,
+    LatLon,
+    RerouteResult,
+    Route,
+    RouteRequest,
+    TrafficInfo,
+)
 from app.services.landmarks.finder import find_landmarks
+from app.services.navigation.announcer import check_announcement
 from app.services.navigation.sessions import create_session, get_session
 from app.services.navigation.steps import simplify_steps
 from app.services.navigation.templates import build_instructions, fmt_dist, live_instruction
 from app.services.routing.client import RoutingError, get_route
 from app.services.routing.deviation import distance_m, next_maneuver, project
+from app.services.traffic.adapter import build_traffic_spoken_summary
+from app.services.traffic.budget import can_call
+from app.services.traffic.incidents import check_incident_announcement, get_route_bbox
+from app.services.traffic.provider import TrafficSnapshot
+from app.services.traffic.tomtom import TomTomTrafficProvider
 
 router = APIRouter(prefix="/navigation", tags=["navigation"])
 MAX_CLOCK_SKEW_S = 300
 ARRIVED_M = 25
 MIN_REROUTE_GAP_S = 10
+
+traffic_provider = TomTomTrafficProvider()
 
 
 def _http_error(e: RoutingError) -> HTTPException:
@@ -24,6 +40,23 @@ def _http_error(e: RoutingError) -> HTTPException:
 
 @router.post("/route", response_model=Route)
 async def route(req: RouteRequest):
+    if req.mode == "drive":
+        tomtom_res = await traffic_provider.get_route_with_traffic(req.start, req.end)
+        if tomtom_res:
+            r, summary = tomtom_res
+            spoken = build_traffic_spoken_summary(summary, lang="en")
+            t_info = TrafficInfo(
+                travel_time_s=summary.travel_time_s,
+                no_traffic_travel_time_s=summary.no_traffic_travel_time_s,
+                delay_s=summary.delay_s,
+                level=summary.level.value,
+                delay_minutes=summary.delay_minutes,
+                travel_minutes=summary.travel_minutes,
+                spoken_summary=spoken,
+                attribution="Traffic data © TomTom",
+            )
+            return r.model_copy(update={"traffic": t_info})
+
     try:
         return await get_route(req.start, req.end, req.mode)
     except RoutingError as e:
@@ -32,10 +65,52 @@ async def route(req: RouteRequest):
 
 @router.post("/guide", response_model=Guide)
 async def guide(req: GuideRequest):
-    try:
-        r = await get_route(req.start, req.end, req.mode)
-    except RoutingError as e:
-        raise _http_error(e)
+    r = None
+    traffic_snapshot = None
+    traffic_status = "not_applicable"
+
+    if req.mode == "drive":
+        traffic_status = "unavailable"
+        if not can_call():
+            traffic_status = "budget_exceeded"
+
+        tomtom_res = await traffic_provider.get_route_with_traffic(req.start, req.end)
+        if tomtom_res:
+            r, traffic_summary = tomtom_res
+            traffic_status = "available"
+
+            spoken = build_traffic_spoken_summary(traffic_summary, lang="en")
+            t_info = TrafficInfo(
+                travel_time_s=traffic_summary.travel_time_s,
+                no_traffic_travel_time_s=traffic_summary.no_traffic_travel_time_s,
+                delay_s=traffic_summary.delay_s,
+                level=traffic_summary.level.value,
+                delay_minutes=traffic_summary.delay_minutes,
+                travel_minutes=traffic_summary.travel_minutes,
+                spoken_summary=spoken,
+                attribution="Traffic data © TomTom",
+            )
+            r = r.model_copy(update={"traffic": t_info})
+
+            # Fetch initial incidents for route bounding box
+            min_lat, min_lon, max_lat, max_lon = get_route_bbox(r.geometry)
+            incidents = await traffic_provider.get_incidents_in_bbox(min_lat, min_lon, max_lat, max_lon)
+            now = time.time()
+            traffic_snapshot = TrafficSnapshot(
+                summary=traffic_summary,
+                incidents=incidents,
+                last_traffic_fetch=now,
+                last_incidents_fetch=now,
+            )
+
+    if r is None:
+        try:
+            r = await get_route(req.start, req.end, req.mode)
+            if req.mode == "drive":
+                r = r.model_copy(update={"eta_note": "Traffic information is not available; estimate does not include traffic."})
+        except RoutingError as e:
+            raise _http_error(e)
+
     steps = simplify_steps(r.steps)
     found = None
     status = "skipped"
@@ -44,8 +119,14 @@ async def guide(req: GuideRequest):
         status = "ok" if found is not None else "unavailable"
     instructions = build_instructions(steps, found or {}, req.mode)
     r = r.model_copy(update={"steps": steps})
-    sid = create_session(r, instructions, found or {}, req.end, req.mode)
-    return Guide(route=r, instructions=instructions, landmarks_status=status, session_id=sid)
+    sid = create_session(r, instructions, found or {}, req.end, req.mode, traffic_snapshot=traffic_snapshot)
+    return Guide(
+        route=r,
+        instructions=instructions,
+        landmarks_status=status,
+        session_id=sid,
+        traffic_status=traffic_status,
+    )
 
 
 @router.post("/position", response_model=NavStatus)
@@ -61,6 +142,31 @@ async def position(u: PositionUpdate):
         raise HTTPException(409, detail={"code": "stale_update", "message": "Older than the last update."})
     s.last_ts = u.timestamp
 
+    if u.lang:
+        s.driver_lang = u.lang
+
+    # Compute or extract speed (m/s)
+    if u.speed_mps is not None and u.speed_mps >= 0:
+        speed = u.speed_mps
+    elif s.last_fix is not None:
+        last_lat, last_lon, last_ts = s.last_fix
+        dt = u.timestamp - last_ts
+        if dt > 0:
+            d = distance_m(last_lat, last_lon, u.lat, u.lon)
+            computed = d / dt
+            # Treat unknown as moving only once displacement shows > 8 km/h (~2.22 m/s)
+            if computed >= (8.0 / 3.6):
+                speed = computed
+            else:
+                speed = 0.0
+        else:
+            speed = s.speed_mps
+    else:
+        speed = 0.0
+
+    s.speed_mps = speed
+    s.last_fix = (u.lat, u.lon, u.timestamp)
+
     dist, along = project(s.route.geometry, u.lat, u.lon)
     poor = u.accuracy_m is not None and u.accuracy_m > s.tracker.max_accuracy_m
     needs_reroute = s.tracker.update(dist, u.accuracy_m, u.timestamp)
@@ -71,22 +177,63 @@ async def position(u: PositionUpdate):
 
     nxt = next_maneuver(s.route.steps, along)
     idx = dist_next = text = None
-    if nxt and dist <= s.tracker.threshold_m:
+    on_route = dist <= s.tracker.threshold_m
+    arrived = remaining < ARRIVED_M
+
+    if nxt and on_route:
         idx, dist_next = nxt
         lm = s.landmarks.get(idx)
         text = live_instruction(s.route.steps[idx], dist_next, lm["name"] if lm else None)
 
+    next_step = s.route.steps[idx] if idx is not None and idx < len(s.route.steps) else None
+    lm_data = s.landmarks.get(idx) if idx is not None else None
+    lm_name = lm_data["name"] if lm_data else None
+
+    # Step announcement
+    announcement = check_announcement(
+        distance_to_next_m=dist_next,
+        speed_mps=speed,
+        step_index=idx,
+        step=next_step,
+        on_route=on_route,
+        arrived=arrived,
+        state=s.announcer_state,
+        landmark_name=lm_name,
+        lang=s.driver_lang,
+    )
+
+    # Periodic incident & traffic refresh while driving
+    if s.mode == "drive" and s.traffic_snapshot.summary:
+        now = u.timestamp
+        # Incidents every 3 minutes (180s)
+        if now - s.traffic_snapshot.last_incidents_fetch >= 180.0:
+            s.traffic_snapshot.last_incidents_fetch = now
+            min_lat, min_lon, max_lat, max_lon = get_route_bbox(s.route.geometry)
+            new_incs = await traffic_provider.get_incidents_in_bbox(min_lat, min_lon, max_lat, max_lon)
+            if new_incs:
+                s.traffic_snapshot.incidents = new_incs
+
+        # Incidents alert check (if no higher priority step announcement)
+        if announcement is None and on_route:
+            inc_ann = check_incident_announcement(
+                s.traffic_snapshot, along, s.route.geometry, now, lang=s.driver_lang
+            )
+            if inc_ann:
+                announcement = inc_ann
+
     result = NavStatus(
-        on_route=dist <= s.tracker.threshold_m,
+        on_route=on_route,
         needs_reroute=needs_reroute,
         gps_quality="poor" if poor else "ok",
         distance_from_route_m=round(dist, 1),
         remaining_m=round(remaining, 1),
         remaining_s=round(remaining_s, 1),
-        arrived=remaining < ARRIVED_M,
+        arrived=arrived,
         next_index=idx,
         next_text=text,
         distance_to_next_m=round(dist_next, 1) if dist_next is not None else None,
+        speed_mps=round(speed, 2),
+        announcement=announcement,
     )
     s.last_status = result
     s.last_status_at = time.time()
@@ -113,10 +260,20 @@ async def reroute(u: PositionUpdate):
     s.reroute_seq += 1
     seq = s.reroute_seq
 
-    try:
-        r = await get_route(LatLon(lat=u.lat, lon=u.lon), s.destination, s.mode)
-    except RoutingError as e:
-        raise _http_error(e)
+    r = None
+    if s.mode == "drive":
+        tomtom_res = await traffic_provider.get_route_with_traffic(LatLon(lat=u.lat, lon=u.lon), s.destination)
+        if tomtom_res:
+            r, summary = tomtom_res
+            s.traffic_snapshot.summary = summary
+            s.traffic_snapshot.last_traffic_fetch = now
+
+    if r is None:
+        try:
+            r = await get_route(LatLon(lat=u.lat, lon=u.lon), s.destination, s.mode)
+        except RoutingError as e:
+            raise _http_error(e)
+
     if seq != s.reroute_seq:
         raise HTTPException(409, detail={"code": "superseded", "message": "A newer reroute is in progress."})
 
@@ -145,8 +302,10 @@ async def reroute(u: PositionUpdate):
     r = r.model_copy(update={"steps": steps})
     s.route, s.instructions, s.landmarks = r, instructions, found or {}
     s.tracker.reset()
+    s.announcer_state.reset()
     s.last_status = None   # old step indexes no longer match the new route
     s.last_ts = max(s.last_ts, u.timestamp)
+    s.last_fix = (u.lat, u.lon, u.timestamp)
 
     minutes = max(1, round(r.duration_s / 60))
     message = (f"You moved away from the route, so I found a new one: "
@@ -155,4 +314,5 @@ async def reroute(u: PositionUpdate):
         route=r, instructions=instructions,
         landmarks_status="ok" if found is not None else "unavailable",
         session_id=u.session_id, message=message,
+        traffic_status="available" if s.traffic_snapshot.summary else "unavailable",
     )
