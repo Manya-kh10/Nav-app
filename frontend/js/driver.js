@@ -1,5 +1,6 @@
 import { searchPlaces, getGuide, sendPosition, sendReroute, sendChat } from "./api.js";
 import { startGpsTracking } from "./gps.js";
+import { startSimulation } from "./sim.js";
 import { speak, stopAudio, startRecording, stopRecording, toWav16k, transcribe } from "./voice.js";
 
 const $ = (id) => document.getElementById(id);
@@ -8,6 +9,7 @@ const $ = (id) => document.getElementById(id);
 let sessionId = null;
 let currentGuide = null;
 let gpsTracker = null;
+let simTracker = null;
 let isDriving = false;
 let isMuted = false;
 let wakeLock = null;
@@ -156,12 +158,20 @@ async function checkReadyForPreview() {
         await new Promise((resolve) => {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    startState.from.lat = pos.coords.latitude;
-                    startState.from.lon = pos.coords.longitude;
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    // Only use GPS if within Bangalore region (~12.75 - 13.25 lat, 77.35 - 77.85 lon)
+                    if (lat >= 12.75 && lat <= 13.25 && lon >= 77.35 && lon <= 77.85) {
+                        startState.from.lat = lat;
+                        startState.from.lon = lon;
+                    } else {
+                        // User is outside Bangalore! Keep default central Bangalore origin (Vidhana Soudha area)
+                        startState.from = { lat: 12.9716, lon: 77.5946, name: "Bangalore Center" };
+                    }
                     resolve();
                 },
                 () => resolve(), // fallback to default Bangalore center
-                { timeout: 4000, enableHighAccuracy: true }
+                { timeout: 3000, enableHighAccuracy: true }
             );
         });
     }
@@ -193,7 +203,8 @@ async function checkReadyForPreview() {
 
         $("route-preview").style.display = "flex";
         $("btn-start-drive").disabled = false;
-        $("setup-status").textContent = "Route ready. Tap START DRIVING to begin.";
+        if ($("btn-sim-drive")) $("btn-sim-drive").disabled = false;
+        $("setup-status").textContent = "Route ready. Tap START DRIVING or SIMULATE DRIVE.";
     } catch (err) {
         $("setup-status").textContent = err.message || "Could not calculate route.";
     }
@@ -286,11 +297,25 @@ function updateHud(status) {
     }
 }
 
+function stopAllTracking() {
+    if (gpsTracker) {
+        gpsTracker.stop();
+        gpsTracker = null;
+    }
+    if (simTracker) {
+        simTracker.stop();
+        simTracker = null;
+    }
+    isDriving = false;
+    stopAudio();
+}
+
 // -------------------------------------------------------------
 // START DRIVING
 // -------------------------------------------------------------
-async function startDriving() {
+async function startDriving(simulated = false) {
     if (!sessionId) return;
+    stopAllTracking();
     isDriving = true;
     currentLang = $("driver-lang").value;
 
@@ -315,6 +340,55 @@ async function startDriving() {
         priority: "high",
         language: currentLang,
     });
+
+    if (simulated) {
+        $("badge-gps").textContent = "SIM DRIVE 36 km/h";
+        $("badge-gps").className = "status-badge active";
+        const simSpeedMps = 10.0; // 36 km/h
+        updateSpeedLockout(simSpeedMps);
+
+        simTracker = startSimulation({
+            geometry: currentGuide.route.geometry,
+            sessionId,
+            wrongTurn: false,
+            stepM: 30, // 30m steps per tick
+            tickMs: 1200,
+            api: {
+                position: (sid, lat, lon, acc, ts) =>
+                    sendPosition(sid, lat, lon, acc, ts, simSpeedMps, currentLang),
+                reroute: (sid, lat, lon, acc, ts) =>
+                    sendReroute(sid, lat, lon, acc, ts),
+            },
+            onTick: ({ status }) => {
+                updateSpeedLockout(simSpeedMps);
+                updateHud(status);
+            },
+            onReroute: (newGuide) => {
+                currentGuide = newGuide;
+                if (newGuide.message) {
+                    playAnnouncement({
+                        text: newGuide.message,
+                        stage: "reroute",
+                        priority: "high",
+                        language: currentLang,
+                    });
+                }
+            },
+            onEnd: () => {
+                updateSpeedLockout(0);
+                playAnnouncement({
+                    text: currentLang === "kn" ? "ನೀವು ನಿಮ್ಮ ಗಮ್ಯಸ್ಥಾನವನ್ನು ತಲುಪಿದ್ದೀರಿ." : "You have arrived at your destination.",
+                    stage: "arrival",
+                    priority: "high",
+                    language: currentLang,
+                });
+            },
+            onError: (err) => {
+                console.warn("Simulation error:", err);
+            },
+        });
+        return;
+    }
 
     // Start Live GPS tracking
     gpsTracker = startGpsTracking({
@@ -471,5 +545,41 @@ setupSearch("to");
 $("driver-lang")?.addEventListener("change", () => {
     if (startState.to) checkReadyForPreview();
 });
-$("btn-start-drive").addEventListener("click", startDriving);
+$("btn-start-drive")?.addEventListener("click", () => startDriving(false));
+$("btn-sim-drive")?.addEventListener("click", () => startDriving(true));
+
+$("btn-hud-exit")?.addEventListener("click", () => {
+    stopAllTracking();
+    updateSpeedLockout(0);
+    $("driving-screen").style.display = "none";
+    $("setup-screen").style.display = "flex";
+});
+
+// Bangalore preset corridors
+const PRESET_COORDS = {
+    "Central Silk Board": { lat: 12.9176, lon: 77.6238, name: "Central Silk Board" },
+    "Indiranagar Metro Station": { lat: 12.9784, lon: 77.6408, name: "Indiranagar Metro Station" },
+    "Mahatma Gandhi Road": { lat: 12.9756, lon: 77.6068, name: "Mahatma Gandhi Road" },
+    "Cubbon Park": { lat: 12.9763, lon: 77.5929, name: "Cubbon Park" },
+    "Malleshwaram": { lat: 13.0031, lon: 77.5643, name: "Malleshwaram" },
+    "Sankey Tank": { lat: 13.0076, lon: 77.5744, name: "Sankey Tank" },
+};
+
+document.querySelectorAll(".preset-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        const fromName = btn.dataset.from;
+        const toName = btn.dataset.to;
+        if (PRESET_COORDS[fromName]) {
+            startState.from = { ...PRESET_COORDS[fromName] };
+            $("from-input").value = fromName;
+            $("from-chosen").textContent = `Selected: ${fromName}`;
+        }
+        if (PRESET_COORDS[toName]) {
+            startState.to = { ...PRESET_COORDS[toName] };
+            $("to-input").value = toName;
+            $("to-chosen").textContent = `Selected: ${toName}`;
+        }
+        checkReadyForPreview();
+    });
+});
 
