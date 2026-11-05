@@ -167,7 +167,8 @@ async function checkReadyForPreview() {
     }
 
     try {
-        const guide = await getGuide(startState.from, startState.to, "drive");
+        const lang = $("driver-lang")?.value || "en";
+        const guide = await getGuide(startState.from, startState.to, "drive", lang);
         currentGuide = guide;
         sessionId = guide.session_id;
 
@@ -300,6 +301,11 @@ async function startDriving() {
 
     // Initial spoken confirmation with live traffic summary if available
     let startMsg = "Starting route guidance. Phone fixed on dashboard.";
+    if (currentLang === "kn") {
+        startMsg = "ಮಾರ್ಗದರ್ಶನ ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತಿದೆ. ಮೊಬೈಲ್ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಲ್ಲಿ ಫಿಕ್ಸ್ ಮಾಡಲಾಗಿದೆ.";
+    } else if (currentLang === "hinglish") {
+        startMsg = "Route guidance shuru ho rahi hai. Phone dashboard par laga hai.";
+    }
     if (currentGuide?.route?.traffic?.spoken_summary) {
         startMsg = currentGuide.route.traffic.spoken_summary;
     }
@@ -462,5 +468,8 @@ $("btn-mute").addEventListener("click", () => {
 // Setup listeners
 setupSearch("from");
 setupSearch("to");
+$("driver-lang")?.addEventListener("change", () => {
+    if (startState.to) checkReadyForPreview();
+});
 $("btn-start-drive").addEventListener("click", startDriving);
 

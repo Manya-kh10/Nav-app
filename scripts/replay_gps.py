@@ -63,14 +63,15 @@ async def replay_scenario(
     simulate_wrong_turn: bool,
     mode: str = "walk",
     speed_mps: float | None = None,
+    lang: str = "en",
 ):
     speed_disp = f" @ {speed_mps * 3.6:.0f} km/h" if speed_mps else ""
-    print(f"\n--- Scenario: {name} [{mode.upper()}{speed_disp}] {'(Wrong-Turn Deviation)' if simulate_wrong_turn else '(Clean Route)'} ---")
+    print(f"\n--- Scenario: {name} [{mode.upper()}{speed_disp} | lang={lang}] {'(Wrong-Turn Deviation)' if simulate_wrong_turn else '(Clean Route)'} ---")
 
     # 1. Request Guide / Route Session
     guide_resp = await client.post(
         "/navigation/guide",
-        json={"start": start, "end": end, "mode": mode, "landmarks": True},
+        json={"start": start, "end": end, "mode": mode, "landmarks": True, "lang": lang},
     )
     if guide_resp.status_code != 200:
         print(f"Failed to get route: HTTP {guide_resp.status_code} - {guide_resp.text}")
@@ -130,6 +131,7 @@ async def replay_scenario(
             "accuracy_m": 8.0,
             "timestamp": cur_sim_time,
             "speed_mps": effective_speed,
+            "lang": lang,
         }
         pos_resp = await client.post("/navigation/position", json=pos_payload)
         ticks += 1
@@ -168,7 +170,8 @@ async def replay_scenario(
 
             # Audio cache check
             tts_text = ann.get("text", "")
-            tts_lang = "en-IN" if ann.get("language") == "en" else "hi-IN"
+            ann_lang = ann.get("language")
+            tts_lang = "kn-IN" if ann_lang == "kn" else ("hi-IN" if ann_lang == "hinglish" else "en-IN")
             key = audio_cache.make_key(
                 settings.gnani_tts_model,
                 settings.gnani_tts_voice,
@@ -252,10 +255,11 @@ async def main():
     parser.add_argument("--url", default="", help="Live backend URL (e.g. http://127.0.0.1:8001/api/v1). If empty, tests in-process.")
     parser.add_argument("--mode", default="all", choices=["walk", "drive", "all"], help="Routing mode to replay.")
     parser.add_argument("--speed", type=float, default=10.0, help="Driving speed in m/s (default: 10.0 m/s = 36 km/h).")
+    parser.add_argument("--lang", default="en", choices=["en", "hinglish", "kn"], help="Guidance language (en, hinglish, kn).")
     args = parser.parse_args()
 
     print("=" * 75)
-    print(" BANGALORE VOICE NAV: DETERMINISTIC GPS REPLAY TEST (DRIVER & WALK)")
+    print(f" BANGALORE VOICE NAV: DETERMINISTIC GPS REPLAY TEST (lang={args.lang})")
     print("=" * 75)
 
     routes = [
@@ -279,10 +283,10 @@ async def main():
         for mode in get_modes():
             speed_val = args.speed if mode == "drive" else 1.4
             for name, start, end in routes:
-                res1 = await replay_scenario(client, f"{name} (Normal)", start, end, False, mode=mode, speed_mps=speed_val)
+                res1 = await replay_scenario(client, f"{name} (Normal)", start, end, False, mode=mode, speed_mps=speed_val, lang=args.lang)
                 if res1:
                     results.append(res1)
-                res2 = await replay_scenario(client, f"{name} (Deviation)", start, end, True, mode=mode, speed_mps=speed_val)
+                res2 = await replay_scenario(client, f"{name} (Deviation)", start, end, True, mode=mode, speed_mps=speed_val, lang=args.lang)
                 if res2:
                     results.append(res2)
 

@@ -44,7 +44,7 @@ async def route(req: RouteRequest):
         tomtom_res = await traffic_provider.get_route_with_traffic(req.start, req.end)
         if tomtom_res:
             r, summary = tomtom_res
-            spoken = build_traffic_spoken_summary(summary, lang="en")
+            spoken = build_traffic_spoken_summary(summary, lang=req.lang or "en")
             t_info = TrafficInfo(
                 travel_time_s=summary.travel_time_s,
                 no_traffic_travel_time_s=summary.no_traffic_travel_time_s,
@@ -79,7 +79,7 @@ async def guide(req: GuideRequest):
             r, traffic_summary = tomtom_res
             traffic_status = "available"
 
-            spoken = build_traffic_spoken_summary(traffic_summary, lang="en")
+            spoken = build_traffic_spoken_summary(traffic_summary, lang=req.lang or "en")
             t_info = TrafficInfo(
                 travel_time_s=traffic_summary.travel_time_s,
                 no_traffic_travel_time_s=traffic_summary.no_traffic_travel_time_s,

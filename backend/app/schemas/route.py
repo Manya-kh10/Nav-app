@@ -12,6 +12,7 @@ class RouteRequest(BaseModel):
     start: LatLon
     end: LatLon
     mode: Literal["walk", "drive"] = "walk"
+    lang: str = "en"
 
 
 class GuideRequest(RouteRequest):

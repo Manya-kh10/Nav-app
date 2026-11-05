@@ -31,10 +31,15 @@ _HINGLISH = _s(
 )
 
 _KANGLISH = _s(
-    "munde", "elli", "tiruga", "tirugabeku", "yava", "kade", "doora", "eshtu", "hottu",
-    "samaya", "nimisha", "dari", "sari", "sariyada", "tappu", "talupiddheva", "talupidheva",
-    "talupidena", "bantha", "banta", "matte", "heli", "hogabeku", "muttidheva", "innomme",
-    "hegide", "ideya", "tada",
+    "munde", "elli", "tiruga", "tirugabeku", "thiruga", "thirugbeku", "tirugi", "thirugi",
+    "tirugli", "thirugli", "yava", "kade", "doora", "eshtu", "eshtide", "eshtidhe", "hottu",
+    "samaya", "nimisha", "dari", "daari", "dhaari", "darina", "dharina", "sari", "sariyada", "tappu",
+    "talupiddheva", "talupidheva", "talupidena", "talupidva", "bantha", "banta", "matte", "heli",
+    "hogabeku", "hogbeku", "hogtiddiva", "hogtiddeeva", "hogthiddeeva", "hogthiddiva", "muttidheva",
+    "innomme", "innondhu", "hegide", "hegidhe", "ideya", "idheya", "tada", "edakke", "edakkey",
+    "balakke", "balakkey", "neravagi", "aaytha", "aytha", "aagidhe", "aagatte", "agatte",
+    "aagidiya", "aagidheya", "agidiya", "agidheya",
+    "apaghata", "apaghatha", "yenadru", "enadru", "jaasti",
 )
 
 # order matters: first matching intent wins
@@ -42,37 +47,39 @@ RULES = [
     ("repeat", [
         "repeat", "say that again", "say again", "once more", "again", "what did you say",
         "dobara", "phir se", "ek baar aur", "repeat karo", "फिर से", "दोबारा", "दुबारा",
-        "ಮತ್ತೆ ಹೇಳಿ", "ಇನ್ನೊಮ್ಮೆ ಹೇಳಿ", "ಮತ್ತೊಮ್ಮೆ ಹೇಳಿ", "ಏನ್ ಹೇಳಿದ್ರಿ", "matte heli", "innomme heli",
+        "ಮತ್ತೆ ಹೇಳಿ", "ಇನ್ನೊಮ್ಮೆ ಹೇಳಿ", "ಮತ್ತೊಮ್ಮೆ ಹೇಳಿ", "ಏನ್ ಹೇಳಿದ್ರಿ", "ಏನು ಹೇಳಿದ್ರಿ", "ಇನ್ನೊಂದು ಸಲ ಹೇಳಿ",
+        "matte heli", "innomme heli", "innondhu sala heli", "en helidri", "yen helidri",
     ]),
     ("incident", [
         "any incident", "any accidents", "any accident", "any crash", "road closed", "road blocked",
         "road works", "construction ahead", "accident ahead", "jam ahead",
         "koi accident", "accident hua hai kya", "road band hai kya", "koi jam hai kya",
         "koi incident", "traffic jam ahead", "aage koi jam",
-        "ಯಾವುದಾದರೂ ಅಪಘಾತ", "ರಸ್ತೆ ಬಂದ್ ಆಗಿದೆಯಾ", "ಅಪಘಾತವಾಗಿದೆಯಾ", "ಯಾವುದಾದರೂ ಜಾಮ್ ಇದೆಯಾ",
-        "accident aagidiya", "raste band agidiya",
+        "ಯಾವುದಾದರೂ ಅಪಘಾತ", "ರಸ್ತೆ ಬಂದ್ ಆಗಿದೆಯಾ", "ಅಪಘಾತವಾಗಿದೆಯಾ", "ಯಾವುದಾದರೂ ಜಾಮ್ ಇದೆಯಾ", "ಅಪಘಾತ ಏನಾದರೂ ಇದೆಯಾ", "ರಸ್ತೆ ಬ್ಲಾಕ್ ಆಗಿದೆಯಾ",
+        "accident aagidiya", "accident aagidheya", "raste band agidiya", "raste block aagidiya", "enadru accident", "yenadru accident",
     ]),
     ("delay", [
         "how much delay", "traffic delay", "any delay", "is there any delay", "how late",
         "kitna delay", "delay kitna hai", "kitna der hoga", "traffic delay kitna hai",
         "कितना डिले", "कितना लेट", "कितनी देरी",
-        "ಎಷ್ಟು ತಡ", "ಎಷ್ಟು ಡಿಲೇ", "ಡಿಲೇ ಎಷ್ಟಿದೆ", "eshtu delay", "eshtu tada",
+        "ಎಷ್ಟು ತಡ", "ಎಷ್ಟು ಡಿಲೇ", "ಡಿಲೇ ಎಷ್ಟಿದೆ", "ತಡವಾಗುತ್ತಾ", "ಎಷ್ಟು ಲೇಟ್ ಆಗುತ್ತೆ", "ತಡ ಎಷ್ಟು",
+        "eshtu delay", "eshtu tada", "delay eshtide", "eshtu late aagatte", "tada aagatta",
     ]),
     ("traffic_ahead", [
         "how is the traffic", "how is traffic", "is there traffic", "traffic condition",
         "traffic ahead", "any traffic", "traffic update", "traffic report", "is traffic heavy",
         "traffic kaisa hai", "aage traffic kaisa hai", "traffic kaisa", "aage traffic hai kya",
         "traffic hai kya", "kitna traffic hai", "traffic kaisa h", "ट्रैफिक कैसा है", "आगे ट्रैफिक कैसा है",
-        "ಟ್ರಾಫಿಕ್ ಹೇಗಿದೆ", "ಟ್ರಾಫಿಕ್ ಇದೆಯಾ", "ಮುಂದೆ ಟ್ರಾಫಿಕ್ ಇದೆಯಾ", "ಟ್ರಾಫಿಕ್ ಪರಿಸ್ಥಿತಿ ಏನು",
-        "traffic hegide", "traffic ideya", "munde traffic ideya",
+        "ಟ್ರಾಫಿಕ್ ಹೇಗಿದೆ", "ಟ್ರಾಫಿಕ್ ಇದೆಯಾ", "ಮುಂದೆ ಟ್ರಾಫಿಕ್ ಇದೆಯಾ", "ಟ್ರಾಫಿಕ್ ಪರಿಸ್ಥಿತಿ ಏನು", "ರಸ್ತೆಯಲ್ಲಿ ಟ್ರಾಫಿಕ್ ಹೇಗಿದೆ",
+        "traffic hegide", "traffic hegidhe", "traffic ideya", "munde traffic ideya", "aage traffic hegide", "traffic jaasti ideya",
     ]),
     ("arrived_check", [
         "have i arrived", "have we arrived", "did i arrive", "are we there", "am i there",
         "pahunch gaye", "pahunch gaya", "pahunch gayi", "pahunch gye", "reach gaye",
         "reach gaya", "reach gayi", "manzil aa gayi", "manzil aa gaya", "manzil pahunch",
         "पहुँच गए", "पहुंच गए", "पहुँच गया", "पहुंच गया",
-        "ತಲುಪಿದ್ದೇವಾ", "ತಲುಪಿದೆವಾ", "ಮುಟ್ಟಿದ್ದೇವಾ", "ತಲುಪಿದಿವಾ", "ಬಂತಾ", "ಜಾಗ ಬಂತಾ",
-        "talupiddheva", "talupidheva", "bantha", "jaaga bantha",
+        "ತಲುಪಿದ್ದೇವಾ", "ತಲುಪಿದೆವಾ", "ಮುಟ್ಟಿದ್ದೇವಾ", "ತಲುಪಿದಿವಾ", "ಬಂತಾ", "ಜಾಗ ಬಂತಾ", "ನಾವು ತಲುಪಿದ್ದೇವಾ", "ರೀಚ್ ಆಯ್ತಾ",
+        "talupiddheva", "talupidheva", "bantha", "jaaga bantha", "reach aaytha", "reach aytha", "reach aagidheeva",
     ]),
     ("on_route", [
         "right track", "right path", "right route", "right way", "right direction",
@@ -81,22 +88,22 @@ RULES = [
         "sahi raste", "sahi rasta", "sahi route", "sahi disha", "sahi direction", "sahi ja",
         "sahi jaa", "theek raste", "theek ja", "galat raste", "galat rasta", "galat ja",
         "galat direction", "सही रास्ते", "सही रास्ता", "सही जा", "गलत रास्ते",
-        "ಸರಿಯಾದ ದಾರಿ", "ಸರಿ ದಾರಿ", "ಸರಿಯಾದ ಮಾರ್ಗ", "ಸರಿ ದಾರಿನಾ", "ತಪ್ಪು ದಾರಿ",
-        "sariyada dari", "sari dari", "tappu dari", "sariyada marga",
+        "ಸರಿಯಾದ ದಾರಿ", "ಸರಿ ದಾರಿ", "ಸರಿಯಾದ ಮಾರ್ಗ", "ಸರಿ ದಾರಿನಾ", "ತಪ್ಪು ದಾರಿ", "ಸರಿಯಾಗಿ ಹೋಗ್ತಿದ್ದೀವಾ", "ಸರಿ ಹೋಗ್ತಿದ್ದೀವಾ",
+        "sariyada dari", "sari dari", "tappu dari", "sariyada marga", "sari hogtiddeeva", "sari hogtiddiva", "sariyagi hogtiddiva", "sari hogtha iddeeva",
     ]),
     ("time_left", [
         "how long", "how much time", "time left", "minutes left", "how many minutes", "eta",
         "when will i reach", "when do i arrive", "kitna time", "kitni der", "kitna samay",
         "kab tak", "kab pahunch", "कितना समय", "कितनी देर",
-        "ಎಷ್ಟು ಸಮಯ", "ಎಷ್ಟು ಹೊತ್ತು", "ಎಷ್ಟು ನಿಮಿಷ", "ಎಷ್ಟು ಟೈಮ್",
-        "eshtu samaya", "eshtu hottu", "eshtu nimisha", "eshtu time",
+        "ಎಷ್ಟು ಸಮಯ", "ಎಷ್ಟು ಹೊತ್ತು", "ಎಷ್ಟು ನಿಮಿಷ", "ಎಷ್ಟು ಟೈಮ್", "ಎಷ್ಟು ಸಮಯ ಬೇಕು", "ಎಷ್ಟು ಹೊತ್ತು ಆಗುತ್ತೆ",
+        "eshtu samaya", "eshtu hottu", "eshtu nimisha", "eshtu time", "eshtu time aagatte", "eshtu hottu aagatte",
     ]),
     ("distance_left", [
         "how far", "how many meters", "how many metres", "how many km", "how many kilometers",
         "distance left", "remaining distance", "kitni door", "kitna door", "kitne meter",
         "kitne km", "कितनी दूर",
-        "ಎಷ್ಟು ದೂರ", "ಇನ್ನು ಎಷ್ಟು ದೂರ", "ಎಷ್ಟು ಮೀಟರ್", "ಎಷ್ಟು ಕಿಮಿ",
-        "eshtu doora", "innu eshtu doora", "eshtu meter", "eshtu km",
+        "ಎಷ್ಟು ದೂರ", "ಇನ್ನು ಎಷ್ಟು ದೂರ", "ಎಷ್ಟು ಮೀಟರ್", "ಎಷ್ಟು ಕಿಮಿ", "ಎಷ್ಟು ಕಿಲೋಮೀಟರ್", "ಇನ್ನೂ ಎಷ್ಟು ದೂರ ಇದೆ",
+        "eshtu doora", "innu eshtu doora", "eshtu meter", "eshtu km", "eshtu doora ide", "innu eshtu doora ide",
     ]),
     ("next_turn", [
         "next turn", "where do i turn", "where should i turn", "where to turn", "which way",
@@ -105,22 +112,22 @@ RULES = [
         "kidhar mudna", "kidhar modna", "kidhar turn", "kahan turn", "ab mujhe kahan",
         "agla mod", "ab kya karna", "kya karna hai", "mudna hai", "modna hai",
         "अगला मोड़", "कहाँ मुड़", "कहां मुड़", "किधर मुड़",
-        "ಮುಂದೆ ಎಲ್ಲಿ ತಿರುಗಬೇಕು", "ಎಲ್ಲಿ ತಿರುಗಬೇಕು", "ಮುಂದಿನ ತಿರುವು", "ಮುಂದೆ ಏನು", "ಎಲ್ಲಿ ಹೋಗಬೇಕು", "ಯಾವ ಕಡೆ",
-        "munde elli tirugabeku", "elli tirugabeku", "munde enu", "yava kade", "elli hogabeku",
+        "ಮುಂದೆ ಎಲ್ಲಿ ತಿರುಗಬೇಕು", "ಎಲ್ಲಿ ತಿರುಗಬೇಕು", "ಮುಂದಿನ ತಿರುವು", "ಮುಂದೆ ಏನು", "ಎಲ್ಲಿ ಹೋಗಬೇಕು", "ಯಾವ ಕಡೆ", "ಎಲ್ಲಿ ತಿರುಗಲಿ", "ಮುಂದೆ ಯಾವ ಕಡೆ",
+        "munde elli tirugabeku", "elli tirugabeku", "munde enu", "yava kade", "elli hogabeku", "munde elli thirugbeku", "elli thirugbeku",
     ]),
 ]
 _RULES = [(intent, [_collapse(p.lower()) for p in phrases]) for intent, phrases in RULES]
 
 # Fallback when no phrase matches: one anchor word from each group is enough.
 COMBOS = [
-    ("traffic_ahead", _s("traffic"), _s("kaisa", "hai", "ahead", "update", "condition", "status", "kitna", "hegide", "ideya")),
-    ("delay", _s("delay"), _s("kitna", "kitni", "traffic", "how", "much", "eshtu", "tada", "is", "there")),
-    ("incident", _s("accident", "jam", "blocked", "closed"), _s("any", "is", "koi", "ahead", "aage", "band")),
+    ("traffic_ahead", _s("traffic", "ಟ್ರಾಫಿಕ್"), _s("kaisa", "hai", "ahead", "update", "condition", "status", "kitna", "hegide", "hegidhe", "ideya", "idheya", "jaasti", "ಹೇಗಿದೆ", "ಇದೆಯಾ")),
+    ("delay", _s("delay", "tada", "ತಡ", "ಡಿಲೇ"), _s("kitna", "kitni", "traffic", "how", "much", "eshtu", "is", "there", "ಎಷ್ಟು", "aagatte")),
+    ("incident", _s("accident", "jam", "blocked", "closed", "ಅಪಘಾತ", "ಜಾಮ್"), _s("any", "is", "koi", "ahead", "aage", "band", "ಆಗಿದೆಯಾ", "ಇದೆಯಾ", "aagidiya", "aagidheya")),
     ("next_turn", _s("kahan", "kidhar", "kaha"),
      _s("mudna", "modna", "mudun", "modun", "turn", "lena", "lun", "jaun", "jana", "chalna", "mod")),
     ("next_turn", _s("where"), _s("turn", "go", "next", "left", "right")),
     ("next_turn", _s("elli", "yava", "munde", "ಎಲ್ಲಿ", "ಯಾವ", "ಮುಂದೆ"),
-     _s("tirugabeku", "tiruga", "hogabeku", "hoga", "kade", "ತಿರುಗಬೇಕು", "ತಿರುಗಿ", "ಹೋಗಬೇಕು", "ಕಡೆ", "ತಿರುವು")),
+     _s("tirugabeku", "thirugbeku", "tiruga", "thiruga", "hogabeku", "hogbeku", "hoga", "kade", "ತಿರುಗಬೇಕು", "ತಿರುಗಿ", "ಹೋಗಬೇಕು", "ಕಡೆ", "ತಿರುವು")),
     ("time_left", _s("kitna", "kitni", "kitne"), _s("time", "der", "samay", "minute", "min")),
     ("time_left", _s("eshtu", "ಎಷ್ಟು"), _s("samaya", "hottu", "nimisha", "time", "ಸಮಯ", "ಹೊತ್ತು", "ನಿಮಿಷ", "ಟೈಮ್")),
     ("distance_left", _s("kitna", "kitni", "kitne"), _s("door", "dur", "meter", "km", "kilometer")),
@@ -128,7 +135,7 @@ COMBOS = [
     ("on_route", _s("sahi", "theek", "galat"),
      _s("raste", "rasta", "route", "ja", "jana", "jaa", "disha", "direction", "side", "taraf")),
     ("on_route", _s("sari", "sariyada", "tappu", "ಸರಿ", "ಸರಿಯಾದ", "ತಪ್ಪು"),
-     _s("dari", "dharina", "marga", "raste", "route", "ದಾರಿ", "ದಾರಿನಾ", "ಮಾರ್ಗ", "ರಸ್ತೆ")),
+     _s("dari", "daari", "dharina", "marga", "raste", "route", "hogtiddiva", "hogtiddeeva", "ದಾರಿ", "ದಾರಿನಾ", "ಮಾರ್ಗ", "ರಸ್ತೆ")),
 ]
 
 

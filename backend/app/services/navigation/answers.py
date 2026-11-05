@@ -66,6 +66,7 @@ def next_hinglish(step: Step, dist_m: float, landmark: str | None) -> str:
 
 
 def next_kannada(step: Step, dist_m: float, landmark: str | None) -> str:
+    from app.services.places.aliases import get_kannada_name
     d = fmt_dist_kn(dist_m)
     if step.maneuver == "arrive":
         return f"{d} ನಂತರ ನೀವು ನಿಮ್ಮ ಗಮ್ಯಸ್ಥಾನವನ್ನು ತಲುಪುತ್ತೀರಿ."
@@ -86,7 +87,8 @@ def next_kannada(step: Step, dist_m: float, landmark: str | None) -> str:
     road = f"{step.road} ನಲ್ಲಿ " if step.road and "ರೌಂಡ್‌ಅಬೌಟ್" not in action else ""
     text = f"{d} ನಂತರ {road}{action}"
     if landmark:
-        text += f", {landmark} ಹತ್ತಿರ"
+        lm_kn = get_kannada_name(landmark) or landmark
+        text += f", {lm_kn} ಹತ್ತಿರ"
     return text + "."
 
 
@@ -258,10 +260,12 @@ def answer(s: Session, message: str, driver_mode: bool = False) -> ChatResponse:
                     f"Traffic smooth hai, {age_hi} check kiya gaya.",
                     f"ಟ್ರಾಫಿಕ್ ಸುಗಮವಾಗಿದೆ, {age_kn} ಪರಿಶೀಲಿಸಲಾಗಿದೆ.",
                 ), remember=True)
+            lvl_hi = "bhaari" if lvl == "heavy" else "halka"
+            lvl_kn = "ದಟ್ಟವಾಗಿದೆ" if lvl == "heavy" else "ಲಘುವಾಗಿದೆ"
             return reply(pick(
                 f"Traffic is {lvl}, about {delay_m} minutes delay, checked {age_en}.",
-                f"Traffic {lvl} hai, lagbhag {delay_m} minute delay hai, {age_hi} check kiya.",
-                f"ಟ್ರಾಫಿಕ್ {lvl} ಆಗಿದೆ, ಸುಮಾರು {delay_m} ನಿಮಿಷ ತಡ, {age_kn} ಪರಿಶೀಲಿಸಲಾಗಿದೆ.",
+                f"Traffic {lvl_hi} hai, lagbhag {delay_m} minute delay hai, {age_hi} check kiya.",
+                f"ಟ್ರಾಫಿಕ್ {lvl_kn}, ಸುಮಾರು {delay_m} ನಿಮಿಷ ತಡ, {age_kn} ಪರಿಶೀಲಿಸಲಾಗಿದೆ.",
             ), remember=True)
 
         if intent == "delay":
@@ -290,10 +294,16 @@ def answer(s: Session, message: str, driver_mode: bool = False) -> ChatResponse:
             first_inc = incidents_ahead[0]
             val, unit = round_spoken_distance(first_inc.distance_to_user_m)
             d_str = format_spoken_dist(val, unit, reply_lang)
+            inc_cat_kn = {
+                "Accident": "ಅಪಘಾತ",
+                "Jam": "ಟ್ರಾಫಿಕ್ ಜಾಮ್",
+                "Road Works": "ರಸ್ತೆ ಕಾಮಗಾರಿ",
+                "Closed": "ರಸ್ತೆ ಬಂದ್",
+            }.get(first_inc.category, first_inc.category)
             return reply(pick(
                 f"{first_inc.category} reported {d_str} ahead.",
                 f"{d_str} aage {first_inc.category} reported hai.",
-                f"{d_str} ಮುಂದೆ {first_inc.category} ವರದಿಯಾಗಿದೆ.",
+                f"{d_str} ಮುಂದೆ {inc_cat_kn} ವರದಿಯಾಗಿದೆ.",
             ), remember=True)
 
     # next_turn

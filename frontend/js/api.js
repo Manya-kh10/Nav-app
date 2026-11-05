@@ -26,11 +26,11 @@ export const getRoute = (start, end, mode) =>
         body: JSON.stringify({ start, end, mode }),
     });
 
-export const getGuide = (start, end, mode) =>
+export const getGuide = (start, end, mode, lang = "en") =>
     request("/api/v1/navigation/guide", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ start, end, mode, landmarks: true }),
+        body: JSON.stringify({ start, end, mode, landmarks: true, lang }),
     });
 
 const postJson = (url, body) =>

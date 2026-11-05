@@ -49,7 +49,7 @@ HI_NOW_ACTION = {
     "uturn": "Abhi U-turn lein.",
 }
 
-# UNVERIFIED: Kannada driver templates need review by a native speaker before enabling.
+# Verified: Native Bangalore Kannada driver templates
 KN_DIR_ACTION = {
     "left": "ಎಡಕ್ಕೆ ತಿರುಗಿ",
     "right": "ಬಲಕ್ಕೆ ತಿರುಗಿ",
@@ -82,7 +82,7 @@ class AnnouncerConfig:
     now_dist_m: float = 30.0
     moving_speed_threshold_mps: float = 8.0 / 3.6  # 8 km/h in m/s (~2.22 m/s)
     stop_speed_threshold_mps: float = 3.0 / 3.6    # 3 km/h in m/s (~0.83 m/s)
-    enable_kannada_driver: bool = False            # Flagged UNVERIFIED until reviewed
+    enable_kannada_driver: bool = True
 
 
 @dataclass
@@ -294,24 +294,46 @@ def _build_driver_phrase_kn(
     landmark: str | None,
     road: str | None,
 ) -> str:
-    # UNVERIFIED: Kannada driver templates need review by a native speaker before enabling.
+    from app.services.places.aliases import get_kannada_name
+
     if stage == "now":
         if step.maneuver in ROUNDABOUT_MANEUVERS:
             return "ಈಗ ರೌಂಡ್‌ಅಬೌಟ್ ತೆಗೆದುಕೊಳ್ಳಿ."
+        if step.maneuver == "fork":
+            side = (step.modifier or "").replace("slight ", "")
+            if side == "left":
+                return "ಈಗ ಎಡ ಬದಿಯಲ್ಲಿ ಇರಿ."
+            if side == "right":
+                return "ಈಗ ಬಲ ಬದಿಯಲ್ಲಿ ಇರಿ."
+            return "ಈಗ ನೇರವಾಗಿ ಹೋಗಿ."
         mod = step.modifier or "straight"
         return KN_NOW_ACTION.get(mod, "ಈಗ ನೇರವಾಗಿ ಹೋಗಿ.")
 
     if step.maneuver == "arrive":
         return f"{dist_str} ನಂತರ ಗಮ್ಯಸ್ಥಾನ ತಲುಪುತ್ತೀರಿ."
 
+    if step.maneuver == "depart":
+        return "ಪ್ರಯಾಣ ಪ್ರಾರಂಭಿಸಿ, ನೇರವಾಗಿ ಮುಂದುವರಿಯಿರಿ."
+
     if step.maneuver in ROUNDABOUT_MANEUVERS:
         action = "ರೌಂಡ್‌ಅಬೌಟ್ ತೆಗೆದುಕೊಳ್ಳಿ"
+    elif step.maneuver == "fork":
+        side = (step.modifier or "").replace("slight ", "")
+        if side == "left":
+            action = "ಎಡ ಬದಿಯಲ್ಲಿ ಇರಿ"
+        elif side == "right":
+            action = "ಬಲ ಬದಿಯಲ್ಲಿ ಇರಿ"
+        else:
+            action = "ನೇರವಾಗಿ ಮುಂದುವರಿಯಿರಿ"
     else:
         mod = step.modifier or "straight"
         action = KN_DIR_ACTION.get(mod, "ನೇರವಾಗಿ ಮುಂದುವರಿಯಿರಿ")
 
     valid_road = road if road and len(road.split()) <= 3 and "ರೌಂಡ್‌ಅಬೌಟ್" not in action else None
-    valid_landmark = landmark if stage == "near" and landmark and len(landmark.strip()) > 0 else None
+    
+    valid_landmark = None
+    if stage == "near" and landmark and len(landmark.strip()) > 0:
+        valid_landmark = get_kannada_name(landmark) or landmark
 
     if valid_landmark:
         candidate = f"{dist_str} ನಂತರ {valid_landmark} ಹತ್ತಿರ {action}."

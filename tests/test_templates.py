@@ -107,6 +107,12 @@ def test_driver_mode_answers():
     assert len(res.text.split()) <= 12
     assert "minute" in res.text.lower()
 
+    # Kannada driver question
+    res = answer(s, "ಮುಂದೆ ಎಲ್ಲಿ ತಿರುಗಬೇಕು?", driver_mode=True)
+    assert res.lang == "kn"
+    assert len(res.text.split()) <= 12
+    assert "ಎಡಕ್ಕೆ ತಿರುಗಿ" in res.text
+
     # Unknown query in driver mode
     res = answer(s, "tell me a joke", driver_mode=True)
     assert len(res.text.split()) <= 12

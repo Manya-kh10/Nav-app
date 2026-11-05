@@ -220,7 +220,7 @@ function buildChatUi() {
   for (const [val, label] of [
     ["en-IN", "English / Hinglish"],
     ["hi-IN", "Hindi"],
-    ["kn-IN", "Kannada"],
+    ["kn-IN", "ಕನ್ನಡ (Kannada)"],
   ]) {
     const o = document.createElement("option");
     o.value = val;
