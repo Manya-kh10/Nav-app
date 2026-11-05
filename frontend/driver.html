@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>Driver Mode | Bangalore Voice Nav</title>
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/driver.css">
 </head>
 <body>
@@ -26,6 +31,15 @@
             <h1>🚗 Driver Mode</h1>
             <a href="/index.html">← Passenger / Map View</a>
         </header>
+
+        <div class="field-group">
+            <span style="font-size:0.8rem; color:#aaa; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">📍 Bangalore Demo Corridors</span>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
+                <button type="button" class="preset-chip" data-from="Central Silk Board" data-to="Indiranagar Metro Station" style="background:#1e293b; color:#00e5ff; border:1px solid #334155; padding:6px 12px; border-radius:16px; font-size:0.82rem; cursor:pointer;">Silk Board ➔ Indiranagar</button>
+                <button type="button" class="preset-chip" data-from="Mahatma Gandhi Road" data-to="Cubbon Park" style="background:#1e293b; color:#00e5ff; border:1px solid #334155; padding:6px 12px; border-radius:16px; font-size:0.82rem; cursor:pointer;">MG Road ➔ Cubbon Park</button>
+                <button type="button" class="preset-chip" data-from="Malleshwaram" data-to="Sankey Tank" style="background:#1e293b; color:#00e5ff; border:1px solid #334155; padding:6px 12px; border-radius:16px; font-size:0.82rem; cursor:pointer;">Malleshwaram ➔ Sankey Tank</button>
+            </div>
+        </div>
 
         <div class="field-group">
             <label for="from-input">Start Location</label>
@@ -78,7 +92,11 @@
         </div>
 
         <button id="btn-start-drive" class="btn-start-drive" disabled>
-            START DRIVING
+            START DRIVING (LIVE GPS)
+        </button>
+
+        <button id="btn-sim-drive" class="btn-start-drive" style="background:#1e293b; color:#00e5ff; border:1.5px solid #00e5ff; box-shadow:none; margin-top:8px;" disabled type="button">
+            🎮 SIMULATE DRIVE (36 km/h)
         </button>
 
         <div id="setup-status" class="stat-lbl" style="text-align:center; color:#ffab00;">
@@ -109,6 +127,7 @@
                 <span id="hud-speed">0</span><span class="speed-unit">km/h</span>
             </div>
             <div class="hud-status-badges">
+                <button id="btn-hud-exit" type="button" style="background:#1e293b; color:#cbd5e1; border:1px solid #475569; padding:4px 10px; border-radius:14px; font-size:0.75rem; cursor:pointer;">✕ EXIT</button>
                 <span id="badge-traffic" class="status-badge">TRAFFIC --</span>
                 <span id="badge-wakelock" class="status-badge active">LOCK 🔒</span>
                 <span id="badge-gps" class="status-badge active">GPS OK</span>

@@ -258,6 +258,8 @@ async function onGo() {
         status(guide.landmarks_status === "unavailable"
             ? "Landmark data unavailable right now; showing plain directions."
             : "");
+        // On mobile, collapse search drawer so the map and route are visible
+        $("app-sidebar")?.classList.add("collapsed");
     } catch (e) {
         status(e.message);
     }
@@ -277,6 +279,19 @@ $("passenger-modal").addEventListener("click", (e) => {
     if (e.target.id === "passenger-modal") closePassengerCard();
 });
 $("card-speak-btn").addEventListener("click", speakToDriver);
+
+// Mobile drawer & bottom-sheet toggles
+$("toggle-search-btn")?.addEventListener("click", () => {
+    $("app-sidebar")?.classList.toggle("collapsed");
+});
+$("sheet-handle")?.addEventListener("click", () => {
+    $("mobile-bottom-sheet")?.classList.toggle("expanded");
+});
+
+// PWA Service Worker Registration
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
 
 async function onAsk() {
     const input = $("chat-input");

@@ -1,0 +1,19 @@
+{
+  "name": "Bangalore Voice Nav",
+  "short_name": "VoiceNav",
+  "description": "Voice-first conversational navigation assistant for Bangalore",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#0b5fff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

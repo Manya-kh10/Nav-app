@@ -3,73 +3,105 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>Bangalore Voice Nav</title>
+    <meta name="theme-color" content="#0b5fff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
     <link rel="stylesheet" href="/css/app.css">
 </head>
 
 <body>
-    <header style="display:flex; justify-content:space-between; align-items:center;">
-        <h1>Bangalore Voice Nav</h1>
-        <a href="/driver.html" style="background:#00e5ff; color:#000; padding:6px 14px; border-radius:6px; font-weight:bold; text-decoration:none;">🚗 Driver Mode (HUD)</a>
+    <header class="app-header">
+        <div class="header-brand">
+            <span class="header-icon">🧭</span>
+            <h1>Bangalore Voice Nav</h1>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <button id="toggle-search-btn" class="btn-toggle-search" type="button">🔍 Route</button>
+            <a href="/driver.html" class="driver-mode-link">🚗 Driver Mode</a>
+        </div>
     </header>
 
-    <section class="panel">
-        <div class="field">
-            <label for="from-input">From</label>
-            <div class="row">
-                <input id="from-input" placeholder="e.g. MG Road Metro Station">
-                <button id="from-search">Search</button>
+    <div class="app-layout">
+        <!-- Route Planning Sidebar / Drawer -->
+        <aside class="app-sidebar" id="app-sidebar">
+            <section class="panel" id="route-panel">
+                <div class="field">
+                    <label for="from-input">From (Origin)</label>
+                    <div class="row">
+                        <input id="from-input" placeholder="e.g. MG Road Metro Station">
+                        <button id="from-search" type="button">Search</button>
+                    </div>
+                    <div id="from-chosen" class="chosen"></div>
+                    <div id="from-results" class="results"></div>
+                </div>
+
+                <div class="field">
+                    <label for="to-input">To (Destination)</label>
+                    <div class="row">
+                        <input id="to-input" placeholder="e.g. Indiranagar Metro Station">
+                        <button id="to-search" type="button">Search</button>
+                    </div>
+                    <div id="to-chosen" class="chosen"></div>
+                    <div id="to-results" class="results"></div>
+                </div>
+
+                <div class="row">
+                    <select id="mode">
+                        <option value="walk">Walk</option>
+                        <option value="drive">Drive</option>
+                    </select>
+                    <button id="go" class="primary" type="button">Get Route</button>
+                </div>
+
+                <div id="status" role="status"></div>
+            </section>
+        </aside>
+
+        <!-- Main Map Canvas -->
+        <main class="map-container">
+            <div id="map"></div>
+        </main>
+
+        <!-- Bottom Sheet (Navigation, Voice Chat, Steps & Simulation) -->
+        <section class="mobile-bottom-sheet" id="mobile-bottom-sheet">
+            <div class="bottom-sheet-handle" id="sheet-handle" title="Tap to expand"></div>
+
+            <div id="nav-next">Get a route, then start navigation or simulation.</div>
+            <div id="nav-meta"></div>
+
+            <button id="passenger-card-btn" class="passenger-card-btn" style="display:none;" type="button">
+                🪪 Auto / Driver Card (Kannada)
+            </button>
+
+            <!-- Voice / Spoken Assistant Query Box -->
+            <div class="row chat">
+                <input id="chat-input" placeholder="Ask: next turn? am I on route? eshtu time?">
+                <button id="chat-send" type="button">Ask</button>
             </div>
-            <div id="from-chosen" class="chosen"></div>
-            <div id="from-results" class="results"></div>
-        </div>
+            <div id="chat-answer"></div>
 
-        <div class="field">
-            <label for="to-input">To</label>
-            <div class="row">
-                <input id="to-input" placeholder="e.g. Indiranagar Metro Station">
-                <button id="to-search">Search</button>
+            <!-- Simulation & Replay Controls -->
+            <div class="row sim">
+                <button id="sim-walk" disabled type="button">Simulate walk</button>
+                <button id="sim-wrong" disabled type="button">Simulate wrong turn</button>
+                <button id="gps-live" disabled type="button">Live GPS</button>
+                <button id="sim-stop" disabled type="button">Stop</button>
             </div>
-            <div id="to-chosen" class="chosen"></div>
-            <div id="to-results" class="results"></div>
-        </div>
 
-        <div class="row">
-            <select id="mode">
-                <option value="walk">Walk</option>
-                <option value="drive">Drive</option>
-            </select>
-            <button id="go" class="primary">Get route</button>
-        </div>
-        <div class="row sim">
-            <button id="sim-walk" disabled>Simulate walk</button>
-            <button id="sim-wrong" disabled>Simulate wrong turn</button>
-            <button id="gps-live" disabled>Live GPS</button>
-            <button id="sim-stop" disabled>Stop</button>
-        </div>
-        <div id="status" role="status"></div>
-    </section>
+            <!-- Summary & Turn-by-Turn Steps -->
+            <div style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+                <div id="summary"></div>
+                <ol id="steps"></ol>
+            </div>
 
-    <div id="map"></div>
-
-    <section class="panel" id="nav">
-        <div id="nav-next">Get a route, then start navigation or simulation.</div>
-        <div id="nav-meta"></div>
-        <button id="passenger-card-btn" class="passenger-card-btn" style="display:none;">🪪 Auto / Driver Card (Kannada)</button>
-        <div class="row chat">
-            <input id="chat-input" placeholder="Ask: next turn? am I on route? kitna time lagega?">
-            <button id="chat-send">Ask</button>
-        </div>
-        <div id="chat-answer"></div>
-        <ul id="nav-log"></ul>
-    </section>
-
-    <section class="panel">
-        <div id="summary"></div>
-        <ol id="steps"></ol>
-    </section>
+            <ul id="nav-log"></ul>
+        </section>
+    </div>
 
     <!-- Passenger / Driver Card Modal -->
     <div id="passenger-modal" class="modal hidden" role="dialog" aria-modal="true">
@@ -85,7 +117,7 @@
                 <div id="card-landmark" class="landmark-dest" style="display:none;"></div>
             </div>
             <div class="modal-footer">
-                <button id="card-speak-btn" class="speak-dest-btn">
+                <button id="card-speak-btn" class="speak-dest-btn" type="button">
                     🔊 ಧ್ವನಿಯಲ್ಲಿ ಹೇಳಿ (Speak in Kannada)
                 </button>
             </div>
