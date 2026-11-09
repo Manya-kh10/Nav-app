@@ -50,5 +50,5 @@ export const sendPosition = (session_id, lat, lon, accuracy_m, timestamp, speed_
 export const sendReroute = (session_id, lat, lon, accuracy_m, timestamp) =>
     postJson("/api/v1/navigation/reroute", { session_id, lat, lon, accuracy_m, timestamp });
 
-export const sendChat = (session_id, message, driver_mode = false) =>
-    postJson("/api/v1/chat", { session_id, message, driver_mode });
+export const sendChat = (session_id, message, driver_mode = false, lang = null) =>
+    postJson("/api/v1/chat", { session_id, message, driver_mode, lang });

@@ -1,7 +1,7 @@
 import { searchPlaces, getGuide, sendPosition, sendReroute, sendChat } from "./api.js";
 import { startGpsTracking } from "./gps.js";
 import { startSimulation } from "./sim.js";
-import { speak, stopAudio, startRecording, stopRecording, toWav16k, transcribe } from "./voice.js";
+import { speak, stopAudio, playChime, startRecording, stopRecording, toWav16k, transcribe } from "./voice.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -90,20 +90,29 @@ document.addEventListener("visibilitychange", async () => {
 // -------------------------------------------------------------
 // AUDIO PLAYBACK & QUEUE MANAGEMENT
 // -------------------------------------------------------------
-async function playAnnouncement(ann) {
-    if (isMuted || !ann || !ann.text) return;
-    lastAnnouncementText = ann.text;
+let currentTrackingSessionId = null;
+let lastAnnouncementId = 0;
+const ttsCode = (l) => ({ en: "en-IN", hi: "hi-IN", hinglish: "hi-IN", kn: "kn-IN" }[l] || "en-IN");
 
-    let ttsLang = "en-IN";
-    if (ann.language === "kn") ttsLang = "kn-IN";
-    else if (ann.language === "hinglish") ttsLang = "hi-IN";
+function playAnnouncement(ann) {
+    if (!ann) return;
+    if (ann.session_id && ann.session_id !== currentTrackingSessionId) {
+        currentTrackingSessionId = ann.session_id;
+        lastAnnouncementId = 0;
+    }
+    if (ann.id && ann.id <= lastAnnouncementId) return;
+    if (ann.id) lastAnnouncementId = ann.id;
+    if (ann.text) lastAnnouncementText = ann.text;
 
-    // New or high-priority announcement interrupts current audio
-    stopAudio();
-    try {
-        await speak(ann.text, ttsLang);
-    } catch (e) {
-        console.warn("Spoken guidance failed:", e);
+    if (ann.chime) {
+        playChime();
+    }
+
+    if (ann.speak && ann.text && !isMuted) {
+        const lang = ann.lang || ann.language || currentLang;
+        speak(ann.text, ttsCode(lang)).catch((e) => {
+            console.warn("Spoken guidance failed:", e);
+        });
     }
 }
 
@@ -258,7 +267,9 @@ function updateHud(status) {
         $("hud-distance").textContent = "ARRIVED";
     }
 
-    if (status.next_text) {
+    if (status.guidance) {
+        $("hud-instruction").textContent = status.guidance.text;
+    } else if (status.next_text) {
         $("hud-instruction").textContent = status.next_text;
     }
 
@@ -317,6 +328,9 @@ async function startDriving(simulated = false) {
     if (!sessionId) return;
     stopAllTracking();
     isDriving = true;
+    lastAnnouncementId = 0;
+    currentTrackingSessionId = sessionId;
+    stopAudio();
     currentLang = $("driver-lang").value;
 
     $("setup-screen").style.display = "none";
@@ -328,6 +342,8 @@ async function startDriving(simulated = false) {
     let startMsg = "Starting route guidance. Phone fixed on dashboard.";
     if (currentLang === "kn") {
         startMsg = "ಮಾರ್ಗದರ್ಶನ ಪ್ರಾರಂಭಿಸಲಾಗುತ್ತಿದೆ. ಮೊಬೈಲ್ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಲ್ಲಿ ಫಿಕ್ಸ್ ಮಾಡಲಾಗಿದೆ.";
+    } else if (currentLang === "hi") {
+        startMsg = "मार्गदर्शन शुरू हो रहा है। फ़ोन डैशबोर्ड पर लगा है।";
     } else if (currentLang === "hinglish") {
         startMsg = "Route guidance shuru ho rahi hai. Phone dashboard par laga hai.";
     }
@@ -364,6 +380,9 @@ async function startDriving(simulated = false) {
                 updateHud(status);
             },
             onReroute: (newGuide) => {
+                lastAnnouncementId = 0;
+                currentTrackingSessionId = newGuide.session_id || sessionId;
+                stopAudio();
                 currentGuide = newGuide;
                 if (newGuide.message) {
                     playAnnouncement({
@@ -405,6 +424,9 @@ async function startDriving(simulated = false) {
             updateHud(status);
         },
         onReroute: (newGuide) => {
+            lastAnnouncementId = 0;
+            currentTrackingSessionId = newGuide.session_id || sessionId;
+            stopAudio();
             currentGuide = newGuide;
             if (newGuide.message) {
                 playAnnouncement({
@@ -441,7 +463,7 @@ $("btn-repeat").addEventListener("click", async () => {
     if (lastAnnouncementText && !isMuted) {
         let ttsLang = "en-IN";
         if (currentLang === "kn") ttsLang = "kn-IN";
-        else if (currentLang === "hinglish") ttsLang = "hi-IN";
+        else if (currentLang === "hinglish" || currentLang === "hi") ttsLang = "hi-IN";
         stopAudio();
         speak(lastAnnouncementText, ttsLang).catch(() => {});
         return;
@@ -505,7 +527,7 @@ async function finishAsk() {
 
         let ttsLang = "en-IN";
         if (currentLang === "kn") ttsLang = "kn-IN";
-        else if (currentLang === "hinglish") ttsLang = "hi-IN";
+        else if (currentLang === "hinglish" || currentLang === "hi") ttsLang = "hi-IN";
 
         const { transcript } = await transcribe(wav, ttsLang);
         if (transcript && sessionId) {

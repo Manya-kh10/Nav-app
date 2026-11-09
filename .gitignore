@@ -15,8 +15,12 @@ data/audio_cache/
 *.m4a
 *.wav
 
-# Overpass API caches & usage logs
+# Overpass API caches, POI tiles, & usage logs
 data/overpass_cache/
 data/poi_tiles/
+data/*usage*
 eval/results/overpass_cache/
-data/usage.jsonl
+eval/results/*.mp3
+
+# Scratch & temporary artifacts
+scratch/

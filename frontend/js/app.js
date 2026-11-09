@@ -2,10 +2,43 @@ import { searchPlaces, getGuide, sendPosition, sendReroute, sendChat } from "./a
 import { initMap, drawRoute, moveUser, clearUser } from "./map.js";
 import { startSimulation } from "./sim.js";
 import { startGpsTracking } from "./gps.js";
+import { speak, stopAudio, playChime } from "./voice.js";
 
 const state = { from: null, to: null, guide: null, sim: null, gps: null };
 const $ = (id) => document.getElementById(id);
 const status = (msg) => { $("status").textContent = msg || ""; };
+
+let currentTrackingSessionId = null;
+let lastAnnouncementId = 0;
+const ttsCode = (l) => ({ en: "en-IN", hi: "hi-IN", hinglish: "hi-IN", kn: "kn-IN" }[l] || "en-IN");
+
+function resetAnnouncements() {
+    lastAnnouncementId = 0;
+    stopAudio();
+}
+
+function handleAnnouncement(s) {
+    if (s.session_id && s.session_id !== currentTrackingSessionId) {
+        currentTrackingSessionId = s.session_id;
+        lastAnnouncementId = 0;
+    }
+    if (s.guidance && $("nav-next")) {
+        $("nav-next").textContent = s.guidance.text;
+    } else if (s.next_text && $("nav-next")) {
+        $("nav-next").textContent = s.next_text;
+    }
+    const a = s.announcement;
+    if (!a || a.id <= lastAnnouncementId) return;
+    lastAnnouncementId = a.id;
+    if (a.chime) {
+        navLog("🔔 Turn chime");
+        playChime();
+    }
+    if (a.speak && a.text) {
+        navLog(`🔊 ${a.text}`);
+        speak(a.text, ttsCode(a.lang || a.language)).catch(() => {});
+    }
+}
 
 function shortName(p) {
     return p.display_name.split(",").slice(0, 3).join(",");
@@ -15,6 +48,13 @@ function setupPicker(key) {
     const input = $(`${key}-input`);
     const list = $(`${key}-results`);
     const chosen = $(`${key}-chosen`);
+
+    input.addEventListener("input", () => status(""));
+    input.addEventListener("focus", () => {
+        if ($("status").textContent.includes("Route expired")) {
+            status("");
+        }
+    });
 
     async function doSearch() {
         const q = input.value.trim();
@@ -40,6 +80,7 @@ function setupPicker(key) {
                     state[key] = { lat: p.lat, lon: p.lon, name: p.name, name_kn: p.name_kn };
                     chosen.textContent = `Selected: ${p.name}`;
                     list.textContent = "";
+                    status(""); // Clear any stale route expired warning
                 });
                 list.appendChild(b);
             }
@@ -62,6 +103,7 @@ function distText(m) {
 }
 
 function renderGuide(guide) {
+    const scrollY = window.scrollY;
     const route = guide.route;
     const mins = Math.round(route.duration_s / 60);
     $("summary").textContent = `${distText(route.distance_m)}, about ${mins} min `;
@@ -69,12 +111,18 @@ function renderGuide(guide) {
     note.className = "note";
     note.textContent = `(${route.eta_note})`;
     $("summary").appendChild(note);
+    const trafficAttr = $("traffic-attr");
+    if (trafficAttr) {
+        trafficAttr.style.display = (guide.traffic_status === "available" || route.traffic) ? "block" : "none";
+    }
     $("steps").textContent = "";
-    for (const ins of guide.instructions) {
+    guide.instructions.forEach((ins, idx) => {
         const li = document.createElement("li");
+        li.id = `step-item-${idx}`;
         li.textContent = ins.text;
         $("steps").appendChild(li);
-    }
+    });
+    window.scrollTo(0, scrollY);
 }
 
 function setSimButtons(running) {
@@ -92,6 +140,7 @@ function navLog(msg) {
 }
 
 function stopTracking() {
+    resetAnnouncements();
     if (state.sim) {
         state.sim.stop();
         state.sim = null;
@@ -103,37 +152,110 @@ function stopTracking() {
     setSimButtons(false);
 }
 
+function getSelectedLang() {
+    const sel = $("voice-lang")?.value || "kn-IN";
+    if (sel === "kn-IN") return { navLang: "kn", ttsLang: "kn-IN" };
+    if (sel === "hi-IN") return { navLang: "hi", ttsLang: "hi-IN" };
+    if (sel === "hinglish") return { navLang: "hinglish", ttsLang: "hi-IN" };
+    return { navLang: "en", ttsLang: "en-IN" };
+}
+
+window.addEventListener("lang-changed", async () => {
+    const { navLang } = getSelectedLang();
+    if (state.guide && state.from && state.to) {
+        try {
+            const guide = await getGuide(
+                { lat: state.from.lat, lon: state.from.lon },
+                { lat: state.to.lat, lon: state.to.lon },
+                $("mode").value,
+                navLang,
+            );
+            state.guide = guide;
+            renderGuide(guide);
+            $("nav-next").textContent = guide.instructions[0]?.text || "";
+        } catch { /* keep existing guide */ }
+    }
+});
+
 function runSim(wrong) {
     if (!state.guide) return;
     stopTracking();
+    resetAnnouncements();
+    currentTrackingSessionId = state.guide.session_id;
     clearUser();
     $("nav-log").textContent = "";
     navLog(wrong ? "Started: walking with a wrong turn" : "Started: walking the route");
+
+    const mode = $("mode")?.value || "walk";
+    const simStepM = mode === "walk" ? 8 : 20;
 
     state.sim = startSimulation({
         geometry: state.guide.route.geometry,
         sessionId: state.guide.session_id,
         wrongTurn: wrong,
-        api: { position: sendPosition, reroute: sendReroute },
+        mode: mode,
+        stepM: simStepM,
+        tickMs: 1000,
+        api: {
+            position: (sid, lat, lon, acc, ts) => {
+                const { navLang } = getSelectedLang();
+                return sendPosition(sid, lat, lon, acc, ts, 1.4, navLang);
+            },
+            reroute: sendReroute,
+        },
         onTick: ({ lat, lon, status: s }) => {
             moveUser(lat, lon);
-            $("nav-next").textContent = s.on_route
-                ? (s.next_text || "")
-                : "You are off the route. Finding a new one...";
+            const { navLang } = getSelectedLang();
+            if (s.guidance) {
+                $("nav-next").textContent = s.guidance.text;
+            } else if (s.next_text) {
+                $("nav-next").textContent = s.next_text;
+            } else if (!s.on_route) {
+                $("nav-next").textContent = navLang === "kn"
+                    ? "ದಾರಿಯಿಂದ ಹೊರಗಿದ್ದೀರಿ. ಹೊಸ ದಾರಿ ಹುಡುಕುತ್ತಿದ್ದೇವೆ..."
+                    : (navLang === "hi"
+                        ? "आप रास्ते से हट गए हैं। नया रास्ता ढूँढ रहे हैं..."
+                        : (navLang === "hinglish"
+                            ? "Aap route se hat gaye hain. Naya rasta dhoond rahe hain..."
+                            : "You are off the route. Finding a new one..."));
+            }
             $("nav-meta").textContent =
                 `${distText(s.remaining_m)} left, about ${Math.round(s.remaining_s / 60)} min` +
                 (s.on_route ? "" : `, ${Math.round(s.distance_from_route_m)} m off route`);
+
+            if (s.next_index !== null && s.next_index !== undefined) {
+                const prev = $("steps").querySelector(".active-step");
+                if (prev) prev.classList.remove("active-step");
+                const cur = $(`step-item-${s.next_index}`);
+                if (cur) {
+                    cur.classList.add("active-step");
+                }
+            }
+
+            handleAnnouncement(s);
         },
         onReroute: (res) => {
+            resetAnnouncements();
+            currentTrackingSessionId = res.session_id;
             state.guide = res;
             renderGuide(res);
             const here = res.route.geometry[0];
             drawRoute(res.route, { lat: here[0], lon: here[1] }, state.to, false);
             navLog(res.message);
+            const { ttsLang } = getSelectedLang();
+            $("nav-next").textContent = res.instructions[0]?.text || res.message;
+            window.dispatchEvent(new CustomEvent("speak-text", {
+                detail: { text: res.message, lang: ttsLang }
+            }));
         },
         onEnd: () => {
             navLog("Arrived.");
-            $("nav-next").textContent = "You have arrived.";
+            const { navLang } = getSelectedLang();
+            $("nav-next").textContent = navLang === "kn"
+                ? "ನೀವು ತಲುಪಿದ್ದೀರಿ."
+                : (navLang === "hi"
+                    ? "आप अपनी मंज़िल पर पहुँच गए हैं।"
+                    : (navLang === "hinglish" ? "Aap pahunch gaye." : "You have arrived."));
             state.sim = null;
             setSimButtons(false);
         },
@@ -150,33 +272,75 @@ function runSim(wrong) {
 function runLiveGps() {
     if (!state.guide) return;
     stopTracking();
+    resetAnnouncements();
+    currentTrackingSessionId = state.guide.session_id;
     clearUser();
     $("nav-log").textContent = "";
     navLog("Started: Live GPS tracking");
 
     state.gps = startGpsTracking({
         sessionId: state.guide.session_id,
-        api: { position: sendPosition, reroute: sendReroute },
+        api: {
+            position: (sid, lat, lon, acc, ts) => {
+                const { navLang } = getSelectedLang();
+                return sendPosition(sid, lat, lon, acc, ts, 1.4, navLang);
+            },
+            reroute: sendReroute,
+        },
         onTick: ({ lat, lon, status: s, accuracy }) => {
             moveUser(lat, lon);
-            $("nav-next").textContent = s.on_route
-                ? (s.next_text || "")
-                : "You are off the route. Finding a new one...";
+            const { navLang } = getSelectedLang();
+            if (s.guidance) {
+                $("nav-next").textContent = s.guidance.text;
+            } else if (s.next_text) {
+                $("nav-next").textContent = s.next_text;
+            } else if (!s.on_route) {
+                $("nav-next").textContent = navLang === "kn"
+                    ? "ದಾರಿಯಿಂದ ಹೊರಗಿದ್ದೀರಿ. ಹೊಸ ದಾರಿ ಹುಡುಕುತ್ತಿದ್ದೇವೆ..."
+                    : (navLang === "hi"
+                        ? "आप रास्ते से हट गए हैं। नया रास्ता ढूँढ रहे हैं..."
+                        : (navLang === "hinglish"
+                            ? "Aap route se hat gaye hain. Naya rasta dhoond rahe hain..."
+                            : "You are off the route. Finding a new one..."));
+            }
             $("nav-meta").textContent =
                 `${distText(s.remaining_m)} left, about ${Math.round(s.remaining_s / 60)} min` +
                 (s.on_route ? "" : `, ${Math.round(s.distance_from_route_m)} m off route`) +
                 ` (GPS ±${Math.round(accuracy)}m)`;
+
+            if (s.next_index !== null && s.next_index !== undefined) {
+                const prev = $("steps").querySelector(".active-step");
+                if (prev) prev.classList.remove("active-step");
+                const cur = $(`step-item-${s.next_index}`);
+                if (cur) {
+                    cur.classList.add("active-step");
+                }
+            }
+
+            handleAnnouncement(s);
         },
         onReroute: (res) => {
+            resetAnnouncements();
+            currentTrackingSessionId = res.session_id;
             state.guide = res;
             renderGuide(res);
             const here = res.route.geometry[0];
             drawRoute(res.route, { lat: here[0], lon: here[1] }, state.to, false);
             navLog(`Rerouted: ${res.message}`);
+            const { ttsLang } = getSelectedLang();
+            $("nav-next").textContent = res.instructions[0]?.text || res.message;
+            window.dispatchEvent(new CustomEvent("speak-text", {
+                detail: { text: res.message, lang: ttsLang }
+            }));
         },
         onEnd: () => {
             navLog("Arrived.");
-            $("nav-next").textContent = "You have arrived.";
+            const { navLang } = getSelectedLang();
+            $("nav-next").textContent = navLang === "kn"
+                ? "ನೀವು ತಲುಪಿದ್ದೀರಿ."
+                : (navLang === "hi"
+                    ? "आप अपनी मंज़िल पर पहुँच गए हैं।"
+                    : (navLang === "hinglish" ? "Aap pahunch gaye." : "You have arrived."));
             state.gps = null;
             setSimButtons(false);
         },
@@ -243,11 +407,15 @@ async function onGo() {
     $("summary").textContent = "";
     $("nav-log").textContent = "";
     try {
+        const { navLang } = getSelectedLang();
         const guide = await getGuide(
             { lat: state.from.lat, lon: state.from.lon },
             { lat: state.to.lat, lon: state.to.lon },
             $("mode").value,
+            navLang,
         );
+        resetAnnouncements();
+        currentTrackingSessionId = guide.session_id;
         state.guide = guide;
         drawRoute(guide.route, state.from, state.to);
         renderGuide(guide);
@@ -258,8 +426,10 @@ async function onGo() {
         status(guide.landmarks_status === "unavailable"
             ? "Landmark data unavailable right now; showing plain directions."
             : "");
-        // On mobile, collapse search drawer so the map and route are visible
-        $("app-sidebar")?.classList.add("collapsed");
+        // On mobile only, collapse search drawer so the map and route are visible
+        if (window.innerWidth < 768) {
+            $("app-sidebar")?.classList.add("collapsed");
+        }
     } catch (e) {
         status(e.message);
     }
@@ -288,6 +458,12 @@ $("sheet-handle")?.addEventListener("click", () => {
     $("mobile-bottom-sheet")?.classList.toggle("expanded");
 });
 
+window.addEventListener("resize", () => {
+    if (window.innerWidth >= 768) {
+        $("app-sidebar")?.classList.remove("collapsed");
+    }
+});
+
 // PWA Service Worker Registration
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -303,13 +479,22 @@ async function onAsk() {
     }
     $("chat-answer").textContent = "...";
     try {
-        const res = await sendChat(state.guide.session_id, msg);
+        const { navLang } = getSelectedLang();
+        const res = await sendChat(state.guide.session_id, msg, false, navLang);
         $("chat-answer").textContent = res.text;
         navLog(`Q: ${msg} -> ${res.text}`);
         window.dispatchEvent(new CustomEvent("nav-answer", { detail: res }));
+        if (res.intent === "start_navigation" && !state.sim) {
+            setTimeout(() => { runSim(false); }, 800);
+        }
         input.value = "";
     } catch (e) {
-        $("chat-answer").textContent = e.message;
+        if (e.message && e.message.includes("Route expired")) {
+            $("chat-answer").textContent = "Route session has expired. Please click 'Get Route' to refresh the route.";
+            status("Route expired. Please click 'Get Route' to refresh the route.");
+        } else {
+            $("chat-answer").textContent = e.message;
+        }
     }
 }
 $("chat-send").addEventListener("click", onAsk);

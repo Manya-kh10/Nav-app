@@ -2,7 +2,7 @@ import time
 
 from fastapi import APIRouter, HTTPException
 
-from app.schemas.nav_state import NavStatus, PositionUpdate
+from app.schemas.nav_state import Guidance, NavStatus, PositionUpdate
 from app.schemas.route import (
     Guide,
     GuideRequest,
@@ -10,10 +10,12 @@ from app.schemas.route import (
     RerouteResult,
     Route,
     RouteRequest,
+    Step,
     TrafficInfo,
 )
 from app.services.landmarks.finder import find_landmarks
-from app.services.navigation.announcer import check_announcement
+from app.services.navigation.announcer import AnnouncerConfig, build_reroute_announcement, check_announcement, render_guidance
+from app.services.navigation.answers import fmt_dist_hi, fmt_dist_kn
 from app.services.navigation.sessions import create_session, get_session
 from app.services.navigation.steps import simplify_steps
 from app.services.navigation.templates import build_instructions, fmt_dist, live_instruction
@@ -28,7 +30,7 @@ from app.services.traffic.tomtom import TomTomTrafficProvider
 router = APIRouter(prefix="/navigation", tags=["navigation"])
 MAX_CLOCK_SKEW_S = 300
 ARRIVED_M = 25
-MIN_REROUTE_GAP_S = 10
+MIN_REROUTE_GAP_S = 2.0
 
 traffic_provider = TomTomTrafficProvider()
 
@@ -119,7 +121,7 @@ async def guide(req: GuideRequest):
         status = "ok" if found is not None else "unavailable"
     instructions = build_instructions(steps, found or {}, req.mode)
     r = r.model_copy(update={"steps": steps})
-    sid = create_session(r, instructions, found or {}, req.end, req.mode, traffic_snapshot=traffic_snapshot)
+    sid = create_session(r, instructions, found or {}, req.end, req.mode, traffic_snapshot=traffic_snapshot, lang=req.lang or "en")
     return Guide(
         route=r,
         instructions=instructions,
@@ -183,7 +185,7 @@ async def position(u: PositionUpdate):
     if nxt and on_route:
         idx, dist_next = nxt
         lm = s.landmarks.get(idx)
-        text = live_instruction(s.route.steps[idx], dist_next, lm["name"] if lm else None)
+        text = live_instruction(s.route.steps[idx], dist_next, lm["name"] if lm else None, lang=s.driver_lang)
 
     next_step = s.route.steps[idx] if idx is not None and idx < len(s.route.steps) else None
     lm_data = s.landmarks.get(idx) if idx is not None else None
@@ -200,6 +202,7 @@ async def position(u: PositionUpdate):
         state=s.announcer_state,
         landmark_name=lm_name,
         lang=s.driver_lang,
+        mode=s.mode,
     )
 
     # Periodic incident & traffic refresh while driving
@@ -221,6 +224,38 @@ async def position(u: PositionUpdate):
             if inc_ann:
                 announcement = inc_ann
 
+    # Guidance computation
+    guidance = None
+    stage_for_guidance = s.announcer_state.last_announced_stage
+    guidance_text = None
+
+    if arrived:
+        guidance_text = render_guidance(
+            next_step or Step(maneuver="arrive", modifier=None, road="", distance_m=0, duration_s=0, lat=u.lat, lon=u.lon),
+            0.0,
+            "arrival",
+            s.driver_lang,
+        )
+    elif next_step is not None and dist_next is not None and on_route:
+        lm_for_guidance = lm_name if stage_for_guidance == "ahead" else None
+        guidance_text = render_guidance(
+            next_step,
+            dist_next,
+            stage_for_guidance,
+            s.driver_lang,
+            lm_for_guidance,
+        )
+    elif not on_route:
+        guidance_text = build_reroute_announcement(s.driver_lang).text
+
+    if guidance_text:
+        guidance = Guidance(
+            step_index=idx,
+            stage=stage_for_guidance,
+            text=guidance_text,
+            lang=s.driver_lang,
+        )
+
     result = NavStatus(
         on_route=on_route,
         needs_reroute=needs_reroute,
@@ -230,10 +265,11 @@ async def position(u: PositionUpdate):
         remaining_s=round(remaining_s, 1),
         arrived=arrived,
         next_index=idx,
-        next_text=text,
+        next_text=guidance_text or text,
         distance_to_next_m=round(dist_next, 1) if dist_next is not None else None,
         speed_mps=round(speed, 2),
         announcement=announcement,
+        guidance=guidance,
     )
     s.last_status = result
     s.last_status_at = time.time()
@@ -308,8 +344,12 @@ async def reroute(u: PositionUpdate):
     s.last_fix = (u.lat, u.lon, u.timestamp)
 
     minutes = max(1, round(r.duration_s / 60))
-    message = (f"You moved away from the route, so I found a new one: "
-               f"{fmt_dist(r.distance_m)}, about {minutes} minutes.")
+    if s.driver_lang == "kn":
+        message = f"ನೀವು ದಾರಿಯಿಂದ ಹೊರಬಂದಿದ್ದೀರಿ, ಹೊಸ ದಾರಿ ಹುಡುಕಲಾಗಿದೆ: {fmt_dist_kn(r.distance_m)}, ಸುಮಾರು {minutes} ನಿಮಿಷ."
+    elif s.driver_lang in ("hinglish", "hi"):
+        message = f"Route se hat gaye the, naya rasta dhoondha hai: {fmt_dist_hi(r.distance_m)}, lagbhag {minutes} minute."
+    else:
+        message = f"You moved away from the route, so I found a new one: {fmt_dist(r.distance_m)}, about {minutes} minutes."
     return RerouteResult(
         route=r, instructions=instructions,
         landmarks_status="ok" if found is not None else "unavailable",

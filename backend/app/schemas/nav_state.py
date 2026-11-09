@@ -3,11 +3,22 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-class Announcement(BaseModel):
+class Guidance(BaseModel):
+    step_index: int | None = None
+    stage: str
     text: str
-    stage: Literal["far", "near", "now", "reroute", "arrival"]
-    priority: Literal["normal", "high"]
-    language: str
+    lang: str
+
+
+class Announcement(BaseModel):
+    id: int = 0
+    stage: str
+    text: str
+    lang: str = "en"
+    speak: bool = True
+    chime: bool = False
+    priority: Literal["normal", "high"] = "normal"
+    language: str | None = None
 
 
 class PositionUpdate(BaseModel):
@@ -33,3 +44,4 @@ class NavStatus(BaseModel):
     distance_to_next_m: float | None
     speed_mps: float | None = None
     announcement: Announcement | None = None
+    guidance: Guidance | None = None

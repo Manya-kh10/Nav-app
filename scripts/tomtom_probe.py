@@ -75,8 +75,11 @@ def map_tomtom_to_step(item: dict, prev_offset: float = 0.0) -> dict:
     offset = float(item.get("routeOffsetInMeters", 0))
     dist = max(0.0, offset - prev_offset)
 
-    street_list = item.get("street", [])
-    road = street_list[0] if street_list else ""
+    street = item.get("street", "")
+    if isinstance(street, list):
+        road = street[0] if street else ""
+    else:
+        road = str(street)
 
     pt = item.get("point", {})
     return {

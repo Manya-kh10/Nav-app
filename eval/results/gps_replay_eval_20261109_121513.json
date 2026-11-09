@@ -1,0 +1,62 @@
+[
+  {
+    "scenario": "Indiranagar 100 Feet Rd",
+    "mode": "walk",
+    "speed_mps": 1.4,
+    "wrong_turn": false,
+    "total_ticks": 513,
+    "off_route_ticks": 0,
+    "reroute_triggered": false,
+    "reroute_latency_ms": null,
+    "arrived": true,
+    "announcements_count": 7,
+    "duplicates": 0,
+    "missed_turns": 0,
+    "uncached_tts_calls": 5
+  },
+  {
+    "scenario": "Indiranagar 100 Feet Rd",
+    "mode": "walk",
+    "speed_mps": 1.4,
+    "wrong_turn": true,
+    "total_ticks": 599,
+    "off_route_ticks": 7,
+    "reroute_triggered": true,
+    "reroute_latency_ms": 1133.9,
+    "arrived": true,
+    "announcements_count": 13,
+    "duplicates": 0,
+    "missed_turns": 0,
+    "uncached_tts_calls": 9
+  },
+  {
+    "scenario": "Indiranagar 100 Feet Rd",
+    "mode": "drive",
+    "speed_mps": 10.0,
+    "wrong_turn": false,
+    "total_ticks": 72,
+    "off_route_ticks": 0,
+    "reroute_triggered": false,
+    "reroute_latency_ms": null,
+    "arrived": true,
+    "announcements_count": 2,
+    "duplicates": 0,
+    "missed_turns": 0,
+    "uncached_tts_calls": 2
+  },
+  {
+    "scenario": "Indiranagar 100 Feet Rd",
+    "mode": "drive",
+    "speed_mps": 10.0,
+    "wrong_turn": true,
+    "total_ticks": 87,
+    "off_route_ticks": 2,
+    "reroute_triggered": true,
+    "reroute_latency_ms": 1323.4,
+    "arrived": true,
+    "announcements_count": 7,
+    "duplicates": 0,
+    "missed_turns": 0,
+    "uncached_tts_calls": 4
+  }
+]

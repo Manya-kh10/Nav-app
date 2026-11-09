@@ -25,6 +25,11 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+html, body {
+    overflow-anchor: none;
+    scroll-behavior: auto;
+}
+
 body {
     background-color: var(--bg-black);
     color: var(--text-white);

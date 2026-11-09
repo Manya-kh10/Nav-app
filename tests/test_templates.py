@@ -6,8 +6,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
 
 from app.schemas.nav_state import NavStatus
 from app.schemas.route import LatLon, Route, Step
-from app.services.navigation.answers import answer, fmt_dist_kn, next_kannada
+from app.services.navigation.answers import answer, fmt_dist_hi, fmt_dist_kn, next_kannada
 from app.services.navigation.sessions import Session
+from app.services.navigation.templates import fmt_dist, live_instruction
 
 
 def _mock_session():
@@ -47,6 +48,35 @@ def _mock_session():
 def test_fmt_dist_kn():
     assert fmt_dist_kn(100) == "100 ಮೀಟರ್"
     assert fmt_dist_kn(1500) == "1.5 ಕಿಲೋಮೀಟರ್"
+
+
+def test_live_countdown_formatting():
+    # Countdown step-by-step distance formatting (< 100m)
+    assert fmt_dist(45) == "45 meters"
+    assert fmt_dist(5) == "5 meters"
+    assert fmt_dist(1) == "1 meter"
+    assert fmt_dist(0) == "0 meters"
+
+    assert fmt_dist_hi(45) == "45 meter"
+    assert fmt_dist_hi(5) == "5 meter"
+
+    assert fmt_dist_kn(45) == "45 ಮೀಟರ್"
+    assert fmt_dist_kn(5) == "5 ಮೀಟರ್"
+
+    step = Step(maneuver="turn", modifier="left", road="CMH Road", distance_m=200, duration_s=120, lat=12.975, lon=77.64)
+
+    # In 45 meters vs immediate turn (<= 5m)
+    assert live_instruction(step, 45, None, lang="en") == "In 45 meters, turn left onto CMH Road."
+    assert live_instruction(step, 5, None, lang="en") == "Now turn left onto CMH Road."
+
+    assert live_instruction(step, 45, None, lang="hi") == "45 मीटर के बाद CMH Road पर बाएँ मुड़ें।"
+    assert live_instruction(step, 5, None, lang="hi") == "अभी CMH Road पर बाएँ मुड़ें।"
+
+    assert live_instruction(step, 45, None, lang="hinglish") == "45 meter ke baad CMH Road par left mudna."
+    assert live_instruction(step, 5, None, lang="hinglish") == "Abhi CMH Road par left mudna."
+
+    assert live_instruction(step, 45, None, lang="kn") == "45 ಮೀಟರ್ ನಂತರ CMH Road ನಲ್ಲಿ ಎಡಕ್ಕೆ ತಿರುಗಿ."
+    assert live_instruction(step, 5, None, lang="kn") == "ಈಗ CMH Road ನಲ್ಲಿ ಎಡಕ್ಕೆ ತಿರುಗಿ."
 
 
 def test_next_kannada():

@@ -45,10 +45,10 @@ def _prune() -> None:
         del _sessions[min(_sessions, key=lambda k: _sessions[k].created)]
 
 
-def create_session(route, instructions, landmarks, destination, mode, traffic_snapshot=None) -> str:
+def create_session(route, instructions, landmarks, destination, mode, traffic_snapshot=None, lang: str = "en") -> str:
     _prune()
     sid = uuid.uuid4().hex
-    s = Session(route, instructions, landmarks, destination, mode)
+    s = Session(route, instructions, landmarks, destination, mode, driver_lang=lang)
     if traffic_snapshot:
         s.traffic_snapshot = traffic_snapshot
     _sessions[sid] = s

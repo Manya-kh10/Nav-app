@@ -13,4 +13,4 @@ async def chat(req: ChatRequest):
     if s is None:
         raise HTTPException(404, detail={"code": "session_not_found",
                                          "message": "Route expired. Please request a new route."})
-    return answer(s, req.message, driver_mode=req.driver_mode)
+    return answer(s, req.message, driver_mode=req.driver_mode, user_lang=req.lang)

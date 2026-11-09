@@ -23,11 +23,13 @@ def _s(*words: str) -> set[str]:
 
 
 _HINGLISH = _s(
-    "kya", "mujhe", "kahan", "kaha", "kidhar", "kitna", "kitni", "kitne", "mudna", "modna",
-    "mudun", "sahi", "galat", "raste", "rasta", "hoon", "hun", "hu", "hai", "ab", "lagega",
+    "kya", "mujhe", "kahan", "kaha", "kidhar", "kitna", "kitni", "kitne", "kitani", "mudna", "modna",
+    "mudun", "sahi", "galat", "raste", "rasta", "hoon", "hun", "hu", "hai", "ab", "abhi", "lagega",
     "lagegi", "kab", "aap", "mera", "samay", "phir", "dobara", "bolo", "batao", "bataiye",
     "agla", "pahunch", "rahi", "raha", "theek", "jana", "jaun", "hum", "gaye", "gaya", "gayi",
-    "lena", "chalna", "aur", "manzil", "aage", "band", "halka", "dhoond",
+    "lena", "chalna", "chalana", "chalo", "shuru", "padega", "padegi", "paidal", "aur", "manzil", "aage", "band", "halka", "dhoond",
+    "bache", "bacha", "jaana", "jaoon", "jaon", "kaun", "kaunsa", "sa", "yeh", "ye", "woh", "wo", "kidr", "nahi", "toh",
+    "door", "dur", "bhatak",
 )
 
 _KANGLISH = _s(
@@ -40,10 +42,19 @@ _KANGLISH = _s(
     "balakke", "balakkey", "neravagi", "aaytha", "aytha", "aagidhe", "aagatte", "agatte",
     "aagidiya", "aagidheya", "agidiya", "agidheya",
     "apaghata", "apaghatha", "yenadru", "enadru", "jaasti",
+    "nadeyabeku", "nadibeku", "prarambhisi", "hogona",
 )
 
 # order matters: first matching intent wins
 RULES = [
+    ("start_navigation", [
+        "start", "start walking", "start walk", "start navigation", "start the walk", "start route",
+        "let's go", "lets go", "begin walk", "begin",
+        "shuru karo", "chalna shuru", "chalo", "shuru", "shuru karein", "chalna shuru karein",
+        "शुरू करो", "चलना शुरू", "चलो", "शुरू करें",
+        "ಪ್ರಾರಂಭಿಸಿ", "ಶುರು ಮಾಡಿ", "ಹೋಗೋಣ", "ನಡೆಯಲು ಪ್ರಾರಂಭಿಸಿ",
+        "prārambhisi", "prarambhisi", "shuru maadi", "shuru madi", "hogona", "walk shuru",
+    ]),
     ("repeat", [
         "repeat", "say that again", "say again", "once more", "again", "what did you say",
         "dobara", "phir se", "ek baar aur", "repeat karo", "फिर से", "दोबारा", "दुबारा",
@@ -74,44 +85,95 @@ RULES = [
         "traffic hegide", "traffic hegidhe", "traffic ideya", "munde traffic ideya", "aage traffic hegide", "traffic jaasti ideya",
     ]),
     ("arrived_check", [
-        "have i arrived", "have we arrived", "did i arrive", "are we there", "am i there",
+        "have i arrived", "have we arrived", "did i arrive", "did we arrive",
+        "did i reach", "did we reach", "have i reached", "have we reached", "are we there", "am i there", "are we there yet",
+        "did i reach destination", "did i reach the destination", "have i reached destination",
         "pahunch gaye", "pahunch gaya", "pahunch gayi", "pahunch gye", "reach gaye",
         "reach gaya", "reach gayi", "manzil aa gayi", "manzil aa gaya", "manzil pahunch",
-        "पहुँच गए", "पहुंच गए", "पहुँच गया", "पहुंच गया",
+        "pahunch gaye kya", "reach gaye kya", "kya hum pahunch gaye", "kya main pahunch gaya",
+        "पहुँच गए", "पहुंच गए", "पहुँच गया", "पहुंच गया", "क्या हम पहुँच गए", "क्या हम पहुंच गए",
+        "क्या मैं पहुँच गया", "क्या मैं पहुंच गया", "पहुँच गए क्या", "पहुंच गए क्या", "मंज़िल आ गई क्या", "मंजिल आ गई क्या",
         "ತಲುಪಿದ್ದೇವಾ", "ತಲುಪಿದೆವಾ", "ಮುಟ್ಟಿದ್ದೇವಾ", "ತಲುಪಿದಿವಾ", "ಬಂತಾ", "ಜಾಗ ಬಂತಾ", "ನಾವು ತಲುಪಿದ್ದೇವಾ", "ರೀಚ್ ಆಯ್ತಾ",
         "talupiddheva", "talupidheva", "bantha", "jaaga bantha", "reach aaytha", "reach aytha", "reach aagidheeva",
     ]),
     ("on_route", [
         "right track", "right path", "right route", "right way", "right direction",
+        "is this the right turn", "is this turn right", "is this the correct turn",
+        "did i turn correctly", "did i take the right turn", "did i make the right turn",
+        "is that the right turn", "correct turn", "right turn",
         "correct way", "correct route", "on route", "on the route", "on track", "am i lost",
-        "wrong way", "wrong turn", "going the right way",
+        "wrong way", "wrong turn", "going the right way", "did i miss the turn", "did i miss my turn",
+        "am i on the right track", "am i on the right path", "am i going the right way", "am i on route",
         "sahi raste", "sahi rasta", "sahi route", "sahi disha", "sahi direction", "sahi ja",
         "sahi jaa", "theek raste", "theek ja", "galat raste", "galat rasta", "galat ja",
-        "galat direction", "सही रास्ते", "सही रास्ता", "सही जा", "गलत रास्ते",
+        "kya yeh turn sahi hai", "kya ye turn sahi hai", "turn sahi hai", "sahi turn hai",
+        "sahi mod hai", "kya main sahi ja raha hoon", "kya main sahi ja raha hu", "kya hum sahi raste par hain",
+        "sahi ja raha hu", "galat raste toh nahi", "galat direction", "kya main rasta bhatak gaya", "rasta bhatak gaye kya",
+        "क्या यह turn सही है", "क्या ये turn सही है", "क्या यह टर्न सही है", "क्या यह मोड़ सही है", "क्या ये मोड़ सही है",
+        "टर्न सही है क्या", "सही मोड़ है क्या", "सही टर्न है क्या", "क्या मैं सही दिशा में हूँ", "क्या मैं सही दिशा में हूं",
+        "क्या मैं सही रास्ते पर हूँ", "क्या मैं सही रास्ते पर हूं", "सही रास्ता है क्या", "क्या यह सही रास्ता है", "क्या हम सही जा रहे हैं",
+        "सही रास्ते", "सही रास्ता", "सही जा", "गलत रास्ते", "गलत रास्ता", "क्या मैं रास्ता भटक गया", "रास्ता भटक गया क्या",
         "ಸರಿಯಾದ ದಾರಿ", "ಸರಿ ದಾರಿ", "ಸರಿಯಾದ ಮಾರ್ಗ", "ಸರಿ ದಾರಿನಾ", "ತಪ್ಪು ದಾರಿ", "ಸರಿಯಾಗಿ ಹೋಗ್ತಿದ್ದೀವಾ", "ಸರಿ ಹೋಗ್ತಿದ್ದೀವಾ",
         "sariyada dari", "sari dari", "tappu dari", "sariyada marga", "sari hogtiddeeva", "sari hogtiddiva", "sariyagi hogtiddiva", "sari hogtha iddeeva",
     ]),
     ("time_left", [
-        "how long", "how much time", "time left", "minutes left", "how many minutes", "eta",
-        "when will i reach", "when do i arrive", "kitna time", "kitni der", "kitna samay",
+        "how long", "how much time", "time left", "minutes left", "how many minutes", "how many minutes left", "eta",
+        "when will i reach", "when do i arrive", "how long will it take", "kitna time", "kitni der", "kitna samay",
         "kab tak", "kab pahunch", "कितना समय", "कितनी देर",
+        "kitna chalna", "kitna chalna hai", "kitna chalna padega", "kitna chalna padega mujhe",
+        "aur kitna chalna", "aur kitna chalna hai", "aur kitna chalna hai mujhe", "abhi aur kitna chalna hai",
+        "kitani there chalana", "kitani der chalana", "kitni there chalana", "kitni der chalana",
+        "kitni der chalna", "kitni der chalna hai", "kitni der aur chalna hai",
+        "kitna time chalna", "kitna time chalna padega", "chalna kitna baki hai",
+        "chalna kitna hai", "kitna paidal chalna", "kitna paidal chalna hai",
+        "aur kitna time", "aur kitna time lagega", "kitna time lagega", "kitna time bacha", "aur kitna time bacha hai",
+        "how long do i have to walk", "how much do i have to walk", "how much walking is left",
+        "how much more to walk", "how long to walk", "how many minutes to walk",
+        "कितना चलना", "कितना चलना पड़ेगा", "कितना चलना पड़ेगा मुझे", "कितना चलना है",
+        "और कितना चलना", "और कितना चलना है", "और कितना चलना है मुझे", "अभी और कितना चलना है",
+        "और कितना time लगेगा", "और कितना समय लगेगा", "कितना time लगेगा", "कितना समय लगेगा",
+        "कितनी देर लगेगी", "और कितनी देर लगेगी", "कितनी देर चलना", "कितनी देर चलना है", "कितनी देर और चलना है",
+        "कितना समय चलना", "कितना समय चलना पड़ेगा", "कितना पैदल चलना", "कितना चलना बाकी है", "कितना समय बाकी है", "कितना time बचा है", "और कितना time बचा है",
         "ಎಷ್ಟು ಸಮಯ", "ಎಷ್ಟು ಹೊತ್ತು", "ಎಷ್ಟು ನಿಮಿಷ", "ಎಷ್ಟು ಟೈಮ್", "ಎಷ್ಟು ಸಮಯ ಬೇಕು", "ಎಷ್ಟು ಹೊತ್ತು ಆಗುತ್ತೆ",
+        "ಎಷ್ಟು ನಡೆಯಬೇಕು", "ಇನ್ನೂ ಎಷ್ಟು ನಡೆಯಬೇಕು", "ಇನ್ನು ಎಷ್ಟು ನಡೆಯಬೇಕು", "ಎಷ್ಟು ಹೊತ್ತು ನಡೆಯಬೇಕು",
+        "ನಡೆಯಬೇಕು ಎಷ್ಟು", "ವಾಕ್ ಎಷ್ಟು ಮಾಡಬೇಕು",
         "eshtu samaya", "eshtu hottu", "eshtu nimisha", "eshtu time", "eshtu time aagatte", "eshtu hottu aagatte",
+        "eshtu nadeyabeku", "innu eshtu nadeyabeku", "eshtu hottu nadeyabeku",
+        "eshtu nadibeku", "innu eshtu nadibeku", "eshtu walk madbeku",
     ]),
     ("distance_left", [
         "how far", "how many meters", "how many metres", "how many km", "how many kilometers",
-        "distance left", "remaining distance", "kitni door", "kitna door", "kitne meter",
-        "kitne km", "कितनी दूर",
+        "distance left", "remaining distance", "how far do i have to walk", "how many kilometers to walk",
+        "how far is my destination", "how far is it", "how much distance is left", "how many meters left", "how many km left",
+        "kitni door", "kitna door", "kitne meter", "kitne km", "कितनी दूर", "कितना दूर",
+        "aur kitni door", "aur kitna door", "aur kitni door hai", "aur kitna door hai",
+        "kitni door chalna", "kitni door chalna hai", "kitne kilometer chalna", "kitne meter chalna",
+        "distance kitna bacha hai",
+        "और कितना दूर है", "और कितनी दूर है", "कितनी दूर और है", "कितना दूर और है",
+        "कितनी दूर चलना", "कितनी दूर चलना है", "कितने किलोमीटर चलना", "कितने मीटर चलना", "कितना रास्ता बचा है", "कितनी दूरी बची है",
         "ಎಷ್ಟು ದೂರ", "ಇನ್ನು ಎಷ್ಟು ದೂರ", "ಎಷ್ಟು ಮೀಟರ್", "ಎಷ್ಟು ಕಿಮಿ", "ಎಷ್ಟು ಕಿಲೋಮೀಟರ್", "ಇನ್ನೂ ಎಷ್ಟು ದೂರ ಇದೆ",
+        "ಎಷ್ಟು ದೂರ ನಡೆಯಬೇಕು", "ಎಷ್ಟು ಕಿಲೋಮೀಟರ್ ನಡೆಯಬೇಕು", "ಎಷ್ಟು ಮೀಟರ್ ನಡೆಯಬೇಕು", "ಇನ್ನೂ ಎಷ್ಟು ಕಿಮಿ ನಡೆಯಬೇಕು",
         "eshtu doora", "innu eshtu doora", "eshtu meter", "eshtu km", "eshtu doora ide", "innu eshtu doora ide",
+        "eshtu doora nadeyabeku", "eshtu km nadeyabeku", "eshtu meter nadeyabeku",
     ]),
     ("next_turn", [
         "next turn", "where do i turn", "where should i turn", "where to turn", "which way",
+        "where should i go next", "where do i go next", "where to go next", "where should i go",
+        "where do i go now", "where do i go", "which turn should i take", "which turn to take",
+        "which way should i go", "which way do i go", "which road to take", "which road do i take",
         "what next", "what now", "next instruction", "turn next", "left or right",
+        "what should i do next", "what do i do next", "what is my next turn", "what is the next turn",
+        "where to turn next", "what's next", "where to next",
         "next left", "next right", "kahan mudna", "kahan modna", "kahan mudun",
         "kidhar mudna", "kidhar modna", "kidhar turn", "kahan turn", "ab mujhe kahan",
-        "agla mod", "ab kya karna", "kya karna hai", "mudna hai", "modna hai",
-        "अगला मोड़", "कहाँ मुड़", "कहां मुड़", "किधर मुड़",
+        "ab main kahan jaun", "ab main kahan jaon", "ab kahan jana hai", "ab kidhar jana hai",
+        "ab kidhar jaun", "kahan jana hai", "kidhar jana hai", "agla mod kaun sa hai",
+        "agla turn kaun sa hai", "aage kahan mudna hai",
+        "agla mod", "ab kya karna", "kya karna hai", "mudna hai", "modna hai", "aage kya karna hai",
+        "अब मैं कहाँ जाऊँ", "अब मैं कहां जाऊं", "अब मैं कहाँ जाऊ", "अब मैं कहां जाऊ",
+        "अब किधर जाना है", "किधर जाना है", "कहाँ जाना है", "कहाँ जाऊँ", "कहाँ जाऊं", "किधर जाऊँ", "किधर जाऊं",
+        "अगला मोड़ कौन सा है", "अगला मोड़ कहाँ है", "आगे कहाँ मुड़ना है", "मुझे कहाँ जाना है",
+        "अगला मोड़", "कहाँ मुड़", "कहां मुड़", "किधर मुड़", "अगला टर्न कौन सा है", "आगे क्या करना है", "अब क्या करना है",
         "ಮುಂದೆ ಎಲ್ಲಿ ತಿರುಗಬೇಕು", "ಎಲ್ಲಿ ತಿರುಗಬೇಕು", "ಮುಂದಿನ ತಿರುವು", "ಮುಂದೆ ಏನು", "ಎಲ್ಲಿ ಹೋಗಬೇಕು", "ಯಾವ ಕಡೆ", "ಎಲ್ಲಿ ತಿರುಗಲಿ", "ಮುಂದೆ ಯಾವ ಕಡೆ",
         "munde elli tirugabeku", "elli tirugabeku", "munde enu", "yava kade", "elli hogabeku", "munde elli thirugbeku", "elli thirugbeku",
     ]),
@@ -123,19 +185,25 @@ COMBOS = [
     ("traffic_ahead", _s("traffic", "ಟ್ರಾಫಿಕ್"), _s("kaisa", "hai", "ahead", "update", "condition", "status", "kitna", "hegide", "hegidhe", "ideya", "idheya", "jaasti", "ಹೇಗಿದೆ", "ಇದೆಯಾ")),
     ("delay", _s("delay", "tada", "ತಡ", "ಡಿಲೇ"), _s("kitna", "kitni", "traffic", "how", "much", "eshtu", "is", "there", "ಎಷ್ಟು", "aagatte")),
     ("incident", _s("accident", "jam", "blocked", "closed", "ಅಪಘಾತ", "ಜಾಮ್"), _s("any", "is", "koi", "ahead", "aage", "band", "ಆಗಿದೆಯಾ", "ಇದೆಯಾ", "aagidiya", "aagidheya")),
-    ("next_turn", _s("kahan", "kidhar", "kaha"),
-     _s("mudna", "modna", "mudun", "modun", "turn", "lena", "lun", "jaun", "jana", "chalna", "mod")),
-    ("next_turn", _s("where"), _s("turn", "go", "next", "left", "right")),
+    ("next_turn", _s("kahan", "kidhar", "kaha", "where", "which", "कहाँ", "कहां", "किधर", "कहा", "कौन"),
+     _s("mudna", "modna", "mudun", "modun", "turn", "lena", "lun", "jaun", "jana", "chalna", "mod", "go", "next", "way", "road", "जाऊँ", "जाऊं", "जाना", "जाऊ", "जाओ", "मुड़ना", "मोड़", "लूँ", "लेना")),
+    ("next_turn", _s("where", "which"), _s("turn", "go", "next", "left", "right", "way", "road")),
     ("next_turn", _s("elli", "yava", "munde", "ಎಲ್ಲಿ", "ಯಾವ", "ಮುಂದೆ"),
      _s("tirugabeku", "thirugbeku", "tiruga", "thiruga", "hogabeku", "hogbeku", "hoga", "kade", "ತಿರುಗಬೇಕು", "ತಿರುಗಿ", "ಹೋಗಬೇಕು", "ಕಡೆ", "ತಿರುವು")),
-    ("time_left", _s("kitna", "kitni", "kitne"), _s("time", "der", "samay", "minute", "min")),
-    ("time_left", _s("eshtu", "ಎಷ್ಟು"), _s("samaya", "hottu", "nimisha", "time", "ಸಮಯ", "ಹೊತ್ತು", "ನಿಮಿಷ", "ಟೈಮ್")),
-    ("distance_left", _s("kitna", "kitni", "kitne"), _s("door", "dur", "meter", "km", "kilometer")),
-    ("distance_left", _s("eshtu", "ಎಷ್ಟು"), _s("doora", "dur", "meter", "km", "ದೂರ", "ಮೀಟರ್", "ಕಿಮಿ")),
-    ("on_route", _s("sahi", "theek", "galat"),
-     _s("raste", "rasta", "route", "ja", "jana", "jaa", "disha", "direction", "side", "taraf")),
+    ("time_left", _s("kitna", "kitni", "kitne", "kitani", "aur", "abhi", "how", "कितना", "कितनी", "कितने", "और"),
+     _s("time", "der", "there", "samay", "minute", "min", "chalna", "chalana", "paidal", "walk", "long", "eta", "arrive", "reach", "bache", "bacha", "बाकी", "समय", "देर", "चलना", "पैदल", "टाइम")),
+    ("time_left", _s("eshtu", "innu", "ಎಷ್ಟು", "ಇನ್ನೂ", "ಇನ್ನು"),
+     _s("samaya", "hottu", "nimisha", "time", "nadeyabeku", "nadibeku", "walk", "ಸಮಯ", "ಹೊತ್ತು", "ನಿಮಿಷ", "ಟೈಮ್", "ನಡೆಯಬೇಕು", "ನಡಿಬೇಕು")),
+    ("distance_left", _s("kitna", "kitni", "kitne", "how", "कितना", "कितनी", "कितने"),
+     _s("door", "dur", "meter", "km", "kilometer", "far", "distance", "दूर", "किलोमीटर", "मीटर", "दूरी")),
+    ("distance_left", _s("eshtu", "ಎಷ್ಟು"),
+     _s("doora", "dur", "meter", "km", "ದೂರ", "ಮೀಟರ್", "ಕಿಮಿ")),
+    ("on_route", _s("sahi", "theek", "galat", "right", "correct", "wrong", "lost", "सही", "ठीक", "गलत"),
+     _s("raste", "rasta", "route", "ja", "jana", "jaa", "disha", "direction", "side", "taraf", "turn", "mod", "way", "track", "path", "रास्ते", "रास्ता", "टर्न", "मोड़", "दिशा")),
     ("on_route", _s("sari", "sariyada", "tappu", "ಸರಿ", "ಸರಿಯಾದ", "ತಪ್ಪು"),
      _s("dari", "daari", "dharina", "marga", "raste", "route", "hogtiddiva", "hogtiddeeva", "ದಾರಿ", "ದಾರಿನಾ", "ಮಾರ್ಗ", "ರಸ್ತೆ")),
+    ("arrived_check", _s("did", "have", "are", "am", "kya", "क्या", "हम"),
+     _s("arrive", "arrived", "reach", "reached", "there", "pahunch", "पहुँच", "पहुंच", "मंज़िल", "मंजिल")),
 ]
 
 
@@ -144,7 +212,7 @@ def _has(norm: str, phrase: str) -> bool:
         return phrase in norm
     if f" {phrase} " in f" {norm} ":
         return True
-    if len(phrase) >= FUZZY_MIN_LEN:
+    if len(phrase) >= FUZZY_MIN_LEN and len(norm) >= len(phrase) - 3:
         return fuzz.partial_ratio(phrase, norm) >= FUZZY_SCORE
     return False
 
@@ -152,11 +220,15 @@ def _has(norm: str, phrase: str) -> bool:
 def detect_lang(text: str, norm: str) -> str:
     if _KANNADA.search(text):
         return "kn"
-    if _DEVANAGARI.search(text):
-        return "hinglish"
+    has_dev = bool(_DEVANAGARI.search(text))
     words = set(norm.split())
     if words & _KANGLISH:
         return "kn"
+    if has_dev:
+        latin_words = [w for w in words if w.isascii() and len(w) > 1 and not w.isdigit()]
+        if latin_words:
+            return "hinglish"
+        return "hi"
     if words & _HINGLISH:
         return "hinglish"
     return "en"

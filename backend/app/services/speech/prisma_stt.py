@@ -6,7 +6,7 @@ import httpx
 from app.core.config import settings
 from app.services.usage import counter
 
-RETRY_STATUS = {429, 500, 503}
+RETRY_STATUS = {429, 500, 502, 503, 504}
 
 
 class STTError(Exception):
@@ -36,13 +36,19 @@ async def transcribe(audio: bytes, filename: str, content_type: str, language_co
             if r.status_code == 200:
                 body = r.json()
                 if body.get("success") is False:
-                    raise STTError("stt_failed", str(body)[:200])
+                    err_msg = body.get("message") or body.get("error") or str(body)[:200]
+                    raise STTError("stt_failed", err_msg)
                 return {
                     "transcript": (body.get("transcript") or "").strip(),
                     "model": body.get("model"),
                     "request_id": body.get("request_id"),
                 }
-            last = f"HTTP {r.status_code} {r.text[:200]}"
+            raw_text = r.text.strip() if r.text else ""
+            if raw_text.startswith("<") or "html" in raw_text[:100].lower():
+                err_detail = f"Gnani STT upstream service temporarily unavailable (HTTP {r.status_code})"
+            else:
+                err_detail = f"HTTP {r.status_code}: {raw_text[:200]}"
+            last = err_detail
             if r.status_code not in RETRY_STATUS:
                 raise STTError("stt_rejected", last)
         except (httpx.HTTPError, ValueError) as e:

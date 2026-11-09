@@ -9,7 +9,10 @@ DIRS = {
 
 
 def fmt_dist(m: float) -> str:
-    r = max(10, int(round(m / 10.0)) * 10)
+    if m < 100:
+        val = max(0, int(round(m)))
+        return f"{val} meter" if val == 1 else f"{val} meters"
+    r = int(round(m / 10.0)) * 10
     if r < 1000:
         return f"{r} meters"
     km = round(m / 1000, 1)
@@ -59,11 +62,25 @@ def build_instructions(steps: list[Step], landmarks: dict[int, dict], mode: str)
         ))
     return out
 
-def live_instruction(step: Step, dist_m: float, landmark: str | None) -> str:
+def live_instruction(step: Step, dist_m: float, landmark: str | None, lang: str = "en") -> str:
+    if lang == "kn":
+        from app.services.navigation.answers import next_kannada
+        return next_kannada(step, dist_m, landmark)
+    if lang == "hi":
+        from app.services.navigation.answers import next_hindi_devanagari
+        return next_hindi_devanagari(step, dist_m, landmark)
+    if lang == "hinglish":
+        from app.services.navigation.answers import next_hinglish
+        return next_hinglish(step, dist_m, landmark)
     if step.maneuver == "arrive":
+        if dist_m <= 5:
+            return "You have arrived at your destination."
         return f"In {fmt_dist(dist_m)}, you will arrive at your destination."
     action = _action(step)
-    text = f"In {fmt_dist(dist_m)}, {action}"
+    if dist_m <= 5:
+        text = f"Now {action}"
+    else:
+        text = f"In {fmt_dist(dist_m)}, {action}"
     if step.road and "roundabout" not in action:
         text += f" onto {step.road}"
     if landmark:

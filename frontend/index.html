@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>Bangalore Voice Nav</title>
+    <title>Navora</title>
     <meta name="theme-color" content="#0b5fff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,7 +18,7 @@
     <header class="app-header">
         <div class="header-brand">
             <span class="header-icon">🧭</span>
-            <h1>Bangalore Voice Nav</h1>
+            <h1>Navora</h1>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
             <button id="toggle-search-btn" class="btn-toggle-search" type="button">🔍 Route</button>
@@ -53,7 +53,6 @@
                 <div class="row">
                     <select id="mode">
                         <option value="walk">Walk</option>
-                        <option value="drive">Drive</option>
                     </select>
                     <button id="go" class="primary" type="button">Get Route</button>
                 </div>
@@ -96,6 +95,7 @@
             <!-- Summary & Turn-by-Turn Steps -->
             <div style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 10px;">
                 <div id="summary"></div>
+                <div id="traffic-attr" style="font-size: 0.75rem; color: #888; margin-top: 4px; display: none;">Traffic data © TomTom · Privacy: route coordinates sent only for real-time delay calculations.</div>
                 <ol id="steps"></ol>
             </div>
 

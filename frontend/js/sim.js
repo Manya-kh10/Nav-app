@@ -30,25 +30,35 @@ export function resample(geometry, stepM) {
 export function startSimulation({
     geometry, sessionId, wrongTurn, api,
     onTick, onReroute, onEnd, onError,
-    stepM = 30, tickMs = 1000,
+    mode = "walk",
+    stepM = null, tickMs = 1000,
 }) {
-    let path = resample(geometry, stepM);
+    const BASE_MPS = { walk: 1.4, drive: 8 };
+    const mult = Number(new URLSearchParams(location.search).get("simspeed")) || 6;
+    const baseSpeed = BASE_MPS[mode] || 1.4;
+    const effectiveStepM = stepM !== null && stepM !== undefined ? stepM : (baseSpeed * mult);
+    const simulatedSpeedMps = baseSpeed * mult;
+
+    let path = resample(geometry, effectiveStepM);
     let i = 0;
     let wrong = wrongTurn;
     let deviating = false;
     let drift = 0;
     let busy = false;
     let stopped = false;
+    let lastTs = 0;
+    const abortController = new AbortController();
     const deviateAt = Math.floor(path.length * 0.4);
 
     const timer = setInterval(tick, tickMs);
     function stop() {
         stopped = true;
         clearInterval(timer);
+        abortController.abort();
     }
 
     async function tick() {
-        if (stopped || busy) return;
+        if (stopped || busy || abortController.signal.aborted) return;
         busy = true;
         try {
             let [lat, lon] = path[Math.min(i, path.length - 1)];
@@ -57,14 +67,20 @@ export function startSimulation({
                 drift = Math.min(drift + 15, 90); // drifts north, up to 90 m off the road
                 lat += drift / 111320;
             }
-            const status = await api.position(sessionId, lat, lon, 8, Date.now() / 1000);
-            if (stopped) return;
+
+            const nowSec = Date.now() / 1000;
+            lastTs = Math.max(nowSec, lastTs + 0.001);
+
+            const status = await api.position(sessionId, lat, lon, 8, lastTs, simulatedSpeedMps);
+            if (stopped || abortController.signal.aborted) return;
             onTick({ lat, lon, status });
 
             if (status.needs_reroute) {
-                const res = await api.reroute(sessionId, lat, lon, 8, Date.now() / 1000);
-                if (stopped) return;
-                path = resample(res.route.geometry, stepM);
+                const rerouteTs = Math.max(Date.now() / 1000, lastTs + 0.001);
+                lastTs = rerouteTs;
+                const res = await api.reroute(sessionId, lat, lon, 8, rerouteTs);
+                if (stopped || abortController.signal.aborted) return;
+                path = resample(res.route.geometry, effectiveStepM);
                 i = 0;
                 wrong = false;
                 deviating = false;
@@ -79,6 +95,7 @@ export function startSimulation({
             }
             i++;
         } catch (e) {
+            if (stopped || abortController.signal.aborted) return;
             stop();
             onError(e.message || "Simulation failed");
         } finally {

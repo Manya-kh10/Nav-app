@@ -1,6 +1,6 @@
 {
-  "name": "Bangalore Voice Nav",
-  "short_name": "VoiceNav",
+  "name": "Navora",
+  "short_name": "Navora",
   "description": "Voice-first conversational navigation assistant for Bangalore",
   "start_url": "/index.html",
   "display": "standalone",
