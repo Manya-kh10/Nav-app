@@ -31,20 +31,20 @@
         <aside class="app-sidebar" id="app-sidebar">
             <section class="panel" id="route-panel">
                 <div class="field">
-                    <label for="from-input">From (Origin)</label>
-                    <div class="row">
-                        <input id="from-input" placeholder="e.g. MG Road Metro Station">
-                        <button id="from-search" type="button">Search</button>
+                    <label for="from-input">Pickup (Origin)</label>
+                    <div class="row search-input-group">
+                        <button id="from-search" class="search-btn" type="button" aria-label="Search" title="Search"><span class="btn-text">Search</span><span class="btn-icon">🔍</span></button>
+                        <input id="from-input" placeholder="e.g. MG Road Metro Station" autocomplete="off">
                     </div>
                     <div id="from-chosen" class="chosen"></div>
                     <div id="from-results" class="results"></div>
                 </div>
 
                 <div class="field">
-                    <label for="to-input">To (Destination)</label>
-                    <div class="row">
-                        <input id="to-input" placeholder="e.g. Indiranagar Metro Station">
-                        <button id="to-search" type="button">Search</button>
+                    <label for="to-input">Drop (Destination)</label>
+                    <div class="row search-input-group">
+                        <button id="to-search" class="search-btn" type="button" aria-label="Search" title="Search"><span class="btn-text">Search</span><span class="btn-icon">🔍</span></button>
+                        <input id="to-input" placeholder="e.g. Indiranagar Metro Station" autocomplete="off">
                     </div>
                     <div id="to-chosen" class="chosen"></div>
                     <div id="to-results" class="results"></div>

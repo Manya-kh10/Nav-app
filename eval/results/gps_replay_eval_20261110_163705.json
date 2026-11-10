@@ -1,0 +1,17 @@
+[
+  {
+    "scenario": "MG Road Metro -> Indiranagar Metro",
+    "mode": "walk",
+    "speed_mps": 1.4,
+    "wrong_turn": false,
+    "total_ticks": 2691,
+    "off_route_ticks": 0,
+    "reroute_triggered": false,
+    "reroute_latency_ms": null,
+    "arrived": true,
+    "announcements_count": 18,
+    "duplicates": 0,
+    "missed_turns": 0,
+    "uncached_tts_calls": 7
+  }
+]

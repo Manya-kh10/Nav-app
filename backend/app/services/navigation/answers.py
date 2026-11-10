@@ -1,8 +1,9 @@
 import time
 
 from app.schemas.chat import ChatResponse
+from app.schemas.nav_state import NavStatus
 from app.schemas.route import Step
-from app.services.intent.classifier import classify
+from app.services.intent.classifier import _DEVANAGARI, _KANNADA, _LATIN, classify
 from app.services.navigation.announcer import (
     AnnouncerConfig,
     build_driver_instruction,
@@ -152,14 +153,30 @@ def next_kannada(step: Step, dist_m: float, landmark: str | None) -> str:
     return text + "."
 
 
-def _fresh_status(s: Session):
-    if s.last_status is None:
-        return None
-    if s.last_status.arrived:
+def _fresh_status(s: Session) -> NavStatus | None:
+    if s.last_status is not None:
         return s.last_status
-    if time.time() - s.last_status_at > STALE_S:
-        return None
-    return s.last_status
+    if s.route and s.route.steps:
+        steps = s.route.steps
+        nxt_idx = 0
+        dist_next = steps[0].distance_m
+        if steps[0].maneuver == "depart" and len(steps) > 1:
+            nxt_idx = 1
+            dist_next = steps[0].distance_m
+        return NavStatus(
+            on_route=True,
+            needs_reroute=False,
+            gps_quality="ok",
+            distance_from_route_m=0.0,
+            remaining_m=float(s.route.distance_m),
+            remaining_s=float(s.route.duration_s),
+            arrived=False,
+            next_index=nxt_idx,
+            next_text=steps[nxt_idx].road or None,
+            distance_to_next_m=float(dist_next),
+            speed_mps=0.0,
+        )
+    return None
 
 
 def answer(s: Session, message: str, driver_mode: bool = False, user_lang: str | None = None) -> ChatResponse:
@@ -176,14 +193,20 @@ def answer(s: Session, message: str, driver_mode: bool = False, user_lang: str |
         elif "en" in ul:
             norm_user_lang = "en"
 
-    if lang == "kn":
+    has_dev = bool(_DEVANAGARI.search(message))
+    has_kn = bool(_KANNADA.search(message))
+    has_lat = bool(_LATIN.search(message))
+
+    if has_kn:
         reply_lang = "kn"
-    elif lang == "hi":
+    elif has_dev and has_lat:
+        reply_lang = norm_user_lang if norm_user_lang == "hi" else "hinglish"
+    elif has_dev:
         reply_lang = "hi"
-    elif lang == "hinglish":
-        reply_lang = "hinglish"
     elif norm_user_lang in ("kn", "hi", "hinglish"):
         reply_lang = norm_user_lang
+    elif lang in ("kn", "hi", "hinglish"):
+        reply_lang = lang
     elif s.driver_lang in ("kn", "hi", "hinglish") and intent != "unknown":
         reply_lang = s.driver_lang
     else:

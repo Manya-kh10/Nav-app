@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>Driver Mode | Navora</title>
-    <meta name="theme-color" content="#000000">
+    <title>Driver Cockpit | Navora</title>
+    <meta name="theme-color" content="#090d16">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/driver.css">
@@ -14,8 +14,8 @@
 <body>
     <!-- Regulatory Notice Bar -->
     <div class="regulatory-bar">
-        <strong>SAFETY NOTICE:</strong> Mount phone on dashboard before driving. Do not touch phone while car is moving.
-        (Motor Vehicles Driving Regulations 2020, Reg 37 · Not legal advice)
+        <span class="reg-icon">🛡️</span>
+        <span class="reg-text"><strong>SAFETY:</strong> Mount phone on dashboard before driving. Controls lock above 8 km/h (MV Regs 2020, Reg 37).</span>
     </div>
 
     <!-- WakeLock / Backgrounded Warning Banner -->
@@ -27,43 +27,55 @@
          SETUP SCREEN (Available when stopped < 8 km/h or before start)
          ========================================================= -->
     <main id="setup-screen">
-        <header class="setup-header">
-            <h1>🚗 Driver Mode</h1>
-            <a href="/index.html">← Passenger / Map View</a>
+        <header class="app-header driver-header">
+            <div class="brand">
+                <span class="app-logo">🧭</span>
+                <h1 class="brand-title">Navora</h1>
+                <span class="mode-badge">🚗 DRIVER</span>
+            </div>
+            <a href="/index.html" class="nav-return-btn" title="Back to Walk & Map">← Walk Mode</a>
         </header>
 
+        <!-- Bangalore Demo Corridors -->
         <div class="field-group">
-            <span style="font-size:0.8rem; color:#aaa; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">📍 Bangalore Demo Corridors</span>
-            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;">
-                <button type="button" class="preset-chip" data-from="Central Silk Board" data-to="Indiranagar Metro Station" style="background:#1e293b; color:#00e5ff; border:1px solid #334155; padding:6px 12px; border-radius:16px; font-size:0.82rem; cursor:pointer;">Silk Board ➔ Indiranagar</button>
-                <button type="button" class="preset-chip" data-from="Mahatma Gandhi Road" data-to="Cubbon Park" style="background:#1e293b; color:#00e5ff; border:1px solid #334155; padding:6px 12px; border-radius:16px; font-size:0.82rem; cursor:pointer;">MG Road ➔ Cubbon Park</button>
-                <button type="button" class="preset-chip" data-from="Malleshwaram" data-to="Sankey Tank" style="background:#1e293b; color:#00e5ff; border:1px solid #334155; padding:6px 12px; border-radius:16px; font-size:0.82rem; cursor:pointer;">Malleshwaram ➔ Sankey Tank</button>
+            <div class="corridors-label">📍 Popular Bangalore Corridors</div>
+            <div class="corridor-chips">
+                <button type="button" class="preset-chip" data-from="Central Silk Board" data-to="Indiranagar Metro Station">Silk Board ➔ Indiranagar</button>
+                <button type="button" class="preset-chip" data-from="Mahatma Gandhi Road" data-to="Cubbon Park">MG Road ➔ Cubbon Park</button>
+                <button type="button" class="preset-chip" data-from="Malleshwaram" data-to="Sankey Tank">Malleshwaram ➔ Sankey Tank</button>
             </div>
         </div>
 
+        <!-- Origin Input Group -->
         <div class="field-group">
-            <label for="from-input">Start Location</label>
-            <div class="input-row">
+            <label for="from-input">Origin / Start Location</label>
+            <div class="input-pill">
+                <span class="input-icon">📍</span>
                 <input id="from-input" placeholder="Current Location (GPS) or search..." value="Current GPS Location">
-                <button id="from-search" type="button">Search</button>
+                <button id="from-search" class="icon-btn search-btn" type="button" title="Search Origin">🔍</button>
             </div>
-            <div id="from-chosen" class="stat-lbl"></div>
+            <div id="from-chosen" class="chosen-badge"></div>
             <div id="from-results" class="picker-results"></div>
         </div>
 
+        <!-- Destination Input Group with Voice Mic -->
         <div class="field-group">
             <label for="to-input">Destination</label>
-            <div class="input-row">
+            <div class="input-pill">
+                <span class="input-icon">🏁</span>
                 <input id="to-input" placeholder="e.g. Indiranagar Metro, Silk Board...">
-                <button id="to-search" type="button">Search</button>
+                <button id="to-mic" class="icon-btn mic-btn" type="button" title="Speak Destination">🎤</button>
+                <button id="to-search" class="icon-btn search-btn" type="button" title="Search Destination">🔍</button>
             </div>
-            <div id="to-chosen" class="stat-lbl"></div>
+            <div id="to-chosen" class="chosen-badge"></div>
             <div id="to-results" class="picker-results"></div>
         </div>
 
+        <!-- Voice Guidance Language -->
         <div class="field-group">
             <label for="driver-lang">Voice Guidance Language</label>
-            <div class="input-row">
+            <div class="input-pill select-pill">
+                <span class="input-icon">🌐</span>
                 <select id="driver-lang">
                     <option value="en">English (Voice Nav)</option>
                     <option value="hi">हिंदी - Hindi (Voice Nav)</option>
@@ -73,42 +85,45 @@
             </div>
         </div>
 
-        <div class="route-preview-card" id="route-preview" style="display:none;">
-            <div>
-                <div class="stat-val" id="prev-dist">--</div>
+        <!-- Telemetry Route Preview Card -->
+        <div class="route-preview-card" id="route-preview">
+            <div class="preview-stat">
+                <div class="stat-val val-cyan" id="prev-dist">--</div>
                 <div class="stat-lbl">Distance</div>
             </div>
-            <div>
-                <div class="stat-val" id="prev-time">--</div>
+            <div class="preview-stat">
+                <div class="stat-val val-green" id="prev-time">--</div>
                 <div class="stat-lbl">Est. Time</div>
             </div>
-            <div>
-                <div class="stat-val" id="prev-traffic">--</div>
-                <div class="stat-lbl">Traffic</div>
+            <div class="preview-stat">
+                <div class="stat-val val-amber" id="prev-traffic">--</div>
+                <div class="stat-lbl">Live Traffic</div>
             </div>
-            <div>
-                <div class="stat-val" id="prev-turns">--</div>
+            <div class="preview-stat">
+                <div class="stat-val val-white" id="prev-turns">--</div>
                 <div class="stat-lbl">Maneuvers</div>
             </div>
         </div>
 
-        <button id="btn-start-drive" class="btn-start-drive" disabled>
-            START DRIVING (LIVE GPS)
-        </button>
+        <!-- Action Buttons -->
+        <div class="action-buttons-group">
+            <button id="btn-start-drive" class="btn-start-drive" disabled type="button">
+                🚀 START DRIVING (LIVE GPS)
+            </button>
+            <button id="btn-sim-drive" class="btn-sim-drive" disabled type="button">
+                🎮 SIMULATE DRIVE (36 km/h)
+            </button>
+        </div>
 
-        <button id="btn-sim-drive" class="btn-start-drive" style="background:#1e293b; color:#00e5ff; border:1.5px solid #00e5ff; box-shadow:none; margin-top:8px;" disabled type="button">
-            🎮 SIMULATE DRIVE (36 km/h)
-        </button>
-
-        <div id="setup-status" class="stat-lbl" style="text-align:center; color:#ffab00;">
+        <div id="setup-status" class="setup-status">
             Enter destination and select a route to start.
         </div>
 
+        <!-- Legal Compliance Card -->
         <div class="legal-card">
-            <strong>India Motor Vehicles (Driving) Regulations 2020 (reg. 37):</strong>
-            Use of handheld navigation devices while driving is prohibited. Phone must be fixed in a dashboard mount prior to vehicle motion.
-            Navora automatically locks non-essential controls when moving above 8 km/h.
-            <div style="margin-top:6px; color:#888;">
+            <div class="legal-header">⚖️ India Motor Vehicles (Driving) Regulations 2020 (Reg 37)</div>
+            <p>Use of handheld navigation devices while driving is prohibited. Phone must be fixed in a dashboard mount prior to vehicle motion. Navora automatically locks non-essential controls when moving above 8 km/h.</p>
+            <div class="legal-traffic-note">
                 Traffic data © TomTom · Privacy: route endpoints and coordinates are processed by the traffic provider for real-time delay calculations.
             </div>
         </div>
@@ -117,25 +132,25 @@
     <!-- =========================================================
          ACTIVE DRIVING HUD
          ========================================================= -->
-    <main id="driving-screen" style="display:none;">
+    <main id="driving-screen">
         <div id="lockout-banner" class="lockout-banner">
             🔒 DRIVING LOCKOUT ACTIVE (> 8 km/h) · Voice-Only Guidance
         </div>
 
-        <!-- Top HUD Bar: Speed, GPS status, WakeLock, Traffic -->
+        <!-- Top HUD Bar: Speedometer, Status Badges, Exit -->
         <header class="hud-top">
             <div class="speed-meter">
                 <span id="hud-speed">0</span><span class="speed-unit">km/h</span>
             </div>
             <div class="hud-status-badges">
-                <button id="btn-hud-exit" type="button" style="background:#1e293b; color:#cbd5e1; border:1px solid #475569; padding:4px 10px; border-radius:14px; font-size:0.75rem; cursor:pointer;">✕ EXIT</button>
                 <span id="badge-traffic" class="status-badge">TRAFFIC --</span>
                 <span id="badge-wakelock" class="status-badge active">LOCK 🔒</span>
                 <span id="badge-gps" class="status-badge active">GPS OK</span>
+                <button id="btn-hud-exit" type="button" class="btn-hud-exit" title="Exit Driving Mode">✕ EXIT</button>
             </div>
         </header>
 
-        <!-- Center Hero: Turn Arrow, Distance, Instruction -->
+        <!-- Center Hero: Turn Arrow, Distance, Instruction, Landmark -->
         <section class="hud-center">
             <div class="maneuver-icon-wrap" id="hud-maneuver-icon">
                 <!-- Dynamic SVG inserted via JS -->
@@ -148,16 +163,16 @@
         <!-- Bottom Trip Stats: ETA and Remaining Dist -->
         <section class="hud-bottom-stats">
             <div class="hud-stat">
-                <div class="hud-stat-val" id="hud-eta">-- min</div>
-                <div class="hud-stat-lbl">Remaining Time</div>
+                <div class="hud-stat-val val-green" id="hud-eta">-- min</div>
+                <div class="hud-stat-lbl">Remaining Time & ETA</div>
             </div>
             <div class="hud-stat">
-                <div class="hud-stat-val" id="hud-remaining-dist">-- km</div>
+                <div class="hud-stat-val val-cyan" id="hud-remaining-dist">-- km</div>
                 <div class="hud-stat-lbl">Distance Left</div>
             </div>
         </section>
 
-        <!-- Three Huge Hands-Free Dashboard Buttons -->
+        <!-- Three Huge Hands-Free Dashboard Buttons (Touch Target >= 76px) -->
         <footer class="hud-actions">
             <button id="btn-repeat" class="hud-btn btn-repeat" type="button" title="Repeat last direction">
                 <span class="hud-btn-icon">↺</span>
@@ -177,4 +192,3 @@
     <script type="module" src="/js/driver.js"></script>
 </body>
 </html>
-

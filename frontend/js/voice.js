@@ -251,8 +251,15 @@ async function toggle(btn, out, onText) {
       setStatus(e.name === "NotAllowedError" ? "Microphone permission was denied." : e.message, out);
       return;
     }
-    active = { btn, label: btn.textContent, onText, out };
-    btn.textContent = "Stop";
+    active = { btn, html: btn.innerHTML, onText, out };
+    const textSpan = btn.querySelector(".btn-text");
+    const iconSpan = btn.querySelector(".btn-icon");
+    if (textSpan && iconSpan) {
+      textSpan.textContent = "Stop";
+      iconSpan.textContent = "⏹️";
+    } else {
+      btn.textContent = "Stop";
+    }
     btn.classList.add("rec");
     setStatus("Listening... tap Stop when done (max 15 s)", out);
     timer = setTimeout(finish, MAX_RECORD_MS);
@@ -269,9 +276,13 @@ async function finish() {
   if (busy || !active) return;
   busy = true;
   clearTimeout(timer);
-  const { btn, label, onText, out } = active;
+  const { btn, html, onText, out } = active;
   active = null;
-  btn.textContent = label;
+  if (html) {
+    btn.innerHTML = html;
+  } else {
+    btn.textContent = "Speak";
+  }
   btn.classList.remove("rec");
   const duration = Date.now() - startedAt;
   mics.forEach((m) => { m.disabled = true; });
@@ -319,9 +330,12 @@ async function finish() {
 function addPlaceMic(key) {
   const searchBtn = $(`${key}-search`);
   if (!searchBtn) return;
+  const inputEl = $(`${key}-input`);
   const b = document.createElement("button");
   b.type = "button";
-  b.textContent = "Speak";
+  b.className = "mic-place-btn";
+  b.setAttribute("aria-label", "Speak");
+  b.innerHTML = '<span class="btn-text">Speak</span><span class="btn-icon">🎤</span>';
   b.title = "Say the place name. Uses the language chosen in the voice row below.";
   b.addEventListener("click", () => {
     const out = $("status");
@@ -330,7 +344,11 @@ function addPlaceMic(key) {
       searchBtn.click(); // shows candidates; you still pick one
     });
   });
-  searchBtn.after(b);
+  if (inputEl) {
+    inputEl.after(b);
+  } else {
+    searchBtn.after(b);
+  }
   mics.push(b);
 }
 
@@ -342,14 +360,27 @@ function buildChatUi() {
 
   const mic = document.createElement("button");
   mic.id = "mic-btn";
-  mic.textContent = "Speak";
+  mic.className = "chat-mic-btn";
+  mic.setAttribute("aria-label", "Speak");
+  mic.title = "Speak your question";
+  mic.innerHTML = '<span class="btn-text">Speak</span><span class="btn-icon">🎙️</span>';
   mic.addEventListener("click", () =>
     toggle(mic, ui.status, (text) => {
       setStatus(`Heard: "${text}"`);
-      $("chat-input").value = text;
-      $("chat-send").click();
+      const input = $("chat-input");
+      if (input) {
+        input.value = text;
+        $("chat-send")?.click();
+      }
     }));
   mics.push(mic);
+
+  const sendBtn = $("chat-send");
+  if (sendBtn) {
+    sendBtn.before(mic);
+  } else {
+    anchor.appendChild(mic);
+  }
 
   ui.lang = document.createElement("select");
   ui.lang.id = "voice-lang";
@@ -375,14 +406,14 @@ function buildChatUi() {
   ui.speak.checked = true;
   label.append(ui.speak, document.createTextNode(" Speak answers"));
 
-  row.append(mic, ui.lang, label);
+  row.append(ui.lang, label);
   ui.status = document.createElement("div");
   ui.status.id = "voice-status";
   anchor.after(row, ui.status);
 }
 
 window.addEventListener("nav-answer", async (e) => {
-  if (!ui.speak?.checked) return;
+  if (ui.speak && !ui.speak.checked) return;
   const { text, lang } = e.detail;
   try {
     let ttsLang = "en-IN";

@@ -1,33 +1,35 @@
-# Bangalore Voice Nav
+# Navora
 
-A bilingual and trilingual conversational voice navigation web application engineered for Bangalore, built for the **Great Indian AI Internship Challenge** by **Gnani.ai**.
+A voice-first navigation assistant prototype for Bangalore, built for the **Great Indian AI Internship Challenge** by **Gnani.ai**. (The repository folder is still named `bangalore-voice-nav`.)
 
-Powered by Gnani.ai's proprietary speech models—**Prisma STT** (Speech-to-Text) and **Timbre TTS** (Text-to-Speech)—combined with OpenStreetMap routing and TomTom real-time traffic intelligence.
+Uses Gnani.ai's **Prisma STT** (speech-to-text) and **Timbre TTS** (text-to-speech) with OpenStreetMap routing (public OSRM servers). Driver Mode can optionally use TomTom traffic data. No LLM is used: every turn, distance and landmark comes from map data and fixed templates.
+
+> **Status:** hackathon prototype. Tested on a desktop browser at `localhost` only; not tested on a phone or in a vehicle. See [Known Limitations](#known-limitations).
 
 ---
 
 ## Key Features
 
 1. **Voice-First Navigation & In-Trip Assistance:**
-   - Spoken natural-language guidance in English, Hinglish, and Kannada.
+   - Spoken guidance and answers in English, Hindi and Hinglish. Kannada is built in but **unverified** (no native-speaker review).
    - Conversational query answering during trips: *"next turn?"*, *"how much delay?"*, *"am I on route?"*, *"how is the traffic ahead?"*.
    - Instant typed fallback if microphone permissions are denied or speech services are unreachable.
 
 2. **Regulatory-Compliant Driver HUD (`/driver.html`):**
-   - Built to comply with Rule 37 of the *Motor Vehicles (Driving) Regulations, 2017* (navigation aids must not distract the driver).
+   - Designed with Rule 37 of the *Motor Vehicles (Driving) Regulations, 2017* in mind (navigation aids must not distract the driver). This has not been legally reviewed or tested in a vehicle.
    - High-contrast, dark-mode display with minimal visual noise and giant 72px touch targets.
    - Speed Lockout Hysteresis: Interface automatically locks visual inputs when traveling at or above 8 km/h, and only unlocks after vehicle remains below 3 km/h for more than 3 seconds.
    - Screen WakeLock management to keep the display active during vehicular travel.
 
 3. **Auto / Cab Driver Card:**
-   - One-tap visual and spoken Kannada destination card (`ದಯವಿಟ್ಟು ಇಲ್ಲಿಗೆ ಕರೆದುಕೊಂಡು ಹೋಗಿ`) allowing non-Kannada speakers to communicate destinations clearly to local auto and taxi drivers.
+   - One-tap visual and spoken Kannada destination card (`ದಯವಿಟ್ಟು ಇಲ್ಲಿಗೆ ಕರೆದುಕೊಂಡು ಹೋಗಿ: <destination>`) to help non-Kannada speakers show a destination to auto and taxi drivers. Kannada wording is unverified.
 
 4. **Local POI Matching & Transliteration:**
-   - 18,700+ indexed Bangalore points of interest (stations, tech parks, hospitals, localities).
+   - 17,442 indexed Bangalore points of interest from OpenStreetMap (`data/bangalore_pois.json`).
    - Offline phonetic and consonant-skeleton matcher capable of resolving typos (*"kurban park"* → Cubbon Park), colloquial aliases (*"majestic bus stand"* → Kempegowda Bus Station), spacing variations (*"white field"* → Whitefield), and native scripts (Devanagari and Kannada).
 
 5. **Live Traffic & Spatial Incident Filtering:**
-   - TomTom API integration calculating live delay, delay percentage, and traffic level (`none`, `light`, `heavy`).
+   - Optional TomTom integration (Driver Mode only) reporting delay, delay percentage and traffic level (`none`, `light`, `heavy`). Only one live traffic reading has been taken during development; no claims are made about typical or peak-hour accuracy.
    - Incident alerts filtered strictly to obstacles within 60 meters of the road centerline and located ahead of the vehicle, rate-limited to at most 1 audio alert per 2 minutes.
    - Hard daily budget enforcement (default 400 calls/day) to prevent quota exhaustion, degrading gracefully to standard routing if limits are reached.
 
@@ -76,19 +78,24 @@ TRAFFIC_DAILY_CAP=400
 ```
 
 ### 3. Run the Application
-Start the FastAPI server:
+Start the FastAPI server from the `backend/` folder:
 ```bash
-uvicorn backend.app.main:app --reload --port 8000
+cd backend
+uvicorn app.main:app --port 8001
 ```
-Open your browser:
-- **Standard Navigation Web UI:** [http://localhost:8000](http://localhost:8000)
-- **High-Contrast Driver Mode:** [http://localhost:8000/driver.html](http://localhost:8000/driver.html)
+Open your browser (add `?nosw=1` if an old cached UI appears):
+- **Main (walking) UI:** [http://localhost:8001](http://localhost:8001)
+- **Driver Mode:** [http://localhost:8001/driver.html](http://localhost:8001/driver.html)
+- **Faster simulation:** append `?simspeed=12` (default multiplier is 6× walking speed).
+
+The server has no authentication. Run it on `localhost` only; do not expose it publicly.
 
 ### 4. Run Automated Tests
+From the project root:
 ```bash
-pytest tests -q
+python -m pytest tests -q
 ```
-Expected result: `46 passed`.
+Last run (2026-11-10): `104 passed`. The tests mostly use mocked or in-process services, not live Gnani/TomTom calls.
 
 ---
 
@@ -102,8 +109,9 @@ All metrics reported below trace directly to raw evaluation artifacts in `eval/r
 | **GPS Replay Simulation** | 4 scenarios (walk 1.4 m/s & drive 10 m/s, clean & wrong-turn) | Missed Turns / Duplicate Announcements | **0 duplicates, 0 missed** | `eval/results/gps_replay_eval_20261109_121513.json` |
 | **Destination Search** | 11 multi-script cases | Top-1 & Top-3 Accuracy | **100.0%** Top-1 & Top-3 | `eval/results/destination_eval.json` |
 | **Destination Latency** | 11 multi-script cases | Mean Search Latency | **143.2 ms** | `eval/results/destination_eval.json` |
-| **Conversational Chat Intents** | 25 test utterances | Intent Hit Rate | **92.0%** (23/25 hit rate) | Verified via `scratch/test_chat_25.py` |
-| **Bangalore Place Matcher** | 23 real-world POI queries | Top-1 / Top-3 Accuracy | **95.7%** Top-1 / **100.0%** Top-3 | Verified via `scratch/test_places_25.py` |
+| **GPS Replay Simulation** | 1 route (MG Road Metro → Indiranagar Metro, walk) | Arrived / Duplicates / Missed turns | **arrived, 0 duplicates, 0 missed** | `eval/results/gps_replay_eval_20261110_164812.json` |
+
+These are small, self-written test sets. They do not measure speech recognition on real or noisy voice recordings. Earlier chat-intent and place-matcher figures came from scratch scripts that are not in this repository, so they are not reported here.
 
 ---
 
@@ -111,10 +119,15 @@ All metrics reported below trace directly to raw evaluation artifacts in `eval/r
 
 1. **Traffic Provider Dependency:** Real-time vehicular traffic delays and road incidents are sourced solely from TomTom. If the API key is absent, network fails, or the daily quota (400 calls/day) is exhausted, the application falls back honestly to free-flow estimates without traffic delays.
 2. **Public OpenStreetMap Infrastructure:** Route geometry and online fallback geocoding rely on public OpenStreetMap servers (OSRM demo server and Nominatim). Under extreme network congestion, external routing requests may experience latency or 502 responses.
-3. **Kannada Spoken Phrasing:** Kannada driver audio templates and passenger card translations are research prototypes and have not yet undergone formal sign-off by a certified native Kannada linguist (`enable_kannada_driver` defaults to disabled in production configuration).
-4. **Benchmark Sample Sizes:** Test benchmarks represent small holdout sets ($n=4$ replay routes, $n=25$ chat queries, $n=25$ place queries) calibrated specifically for Bangalore metropolitan landmarks.
-5. **Driver HUD Calibration:** Driver mode thresholds and speed lockout logic are calibrated for automobiles and taxis operating under urban road speeds.
-6. **Mobile Browser Lifecycle:** The web application relies on the browser Screen Wake Lock API. If the user locks the phone or switches browser tabs, background execution of JavaScript timers and geolocation updates may be suspended by the mobile operating system.
+3. **Kannada is unverified:** Kannada guidance, answers and the driver-card phrase have not been reviewed by a native speaker. The language is labelled "unverified" in the UI.
+4. **Small test sets:** Replay evaluation covers 5 scenarios on 2 corridors, and destination search covers 11 cases. No evaluation of speech recognition on real place names or noisy audio. Credits used per Gnani call are not measured.
+5. **Not field-tested:** Tested only in a desktop browser on `localhost`. Not tested on a phone, outdoors with real GPS, or in a vehicle. Driver Mode thresholds (speed lockout) are not calibrated in a real car.
+6. **Traffic data:** Only one TomTom reading has been taken. No claims about typical or peak-hour traffic. TomTom terms and attribution requirements have not been fully reviewed.
+7. **Place names from OSM:** Some results show OSM names, e.g. the MG Road metro station appears as "Mahatma Gandhi Road (station)".
+8. **No GPS-loss watchdog:** There is no "GPS signal lost" warning yet. Off-route detection (more than 40 m for 5 s) triggers a reroute.
+9. **Language switch during navigation:** Changing the language while a simulation or live GPS session is running changes chat answers but does not re-translate the step list until navigation is stopped.
+10. **No auth, localhost only:** There is no access control or demo token. Do not expose the server publicly.
+11. **Mobile Browser Lifecycle:** The app relies on the Screen Wake Lock API. If the phone locks or the tab is switched, the OS may suspend timers and geolocation updates.
 
 ---
 
@@ -129,7 +142,7 @@ All metrics reported below trace directly to raw evaluation artifacts in `eval/r
 
 ## Privacy Policy
 
-- **Microphone Audio:** Audio recorded via the browser is transmitted over HTTPS to the backend for forwarding to Gnani.ai Prisma STT. Audio bytes are not retained on server storage or logged to permanent storage.
+- **Microphone Audio:** Audio recorded in the browser is sent to the local backend, which forwards it over HTTPS to Gnani.ai Prisma STT. The Gnani API key stays on the backend (`.env`) and is never sent to the browser. Audio bytes are not retained on server storage or logged to permanent storage.
 - **Location Telemetry:** GPS latitude, longitude, and speed updates are processed strictly in-memory during active navigation sessions to calculate distance along route and detect turns. No user tracking history or coordinate trails are saved to databases or shared with third parties.
 - **Traffic Queries:** When driving mode is active, only the route bounding box or origin/destination coordinates are sent to TomTom to fetch real-time traffic delays. No personally identifiable user information is transmitted.
 

@@ -151,6 +151,14 @@ button:active {
     transform: scale(0.98);
 }
 
+.btn-icon {
+    display: none;
+}
+
+.btn-text {
+    display: inline;
+}
+
 button.primary {
     background: var(--primary);
     color: #ffffff;
@@ -593,6 +601,37 @@ label {
         display: block !important;
     }
 
+    .search-input-group {
+        display: flex !important;
+        gap: 8px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        height: auto !important;
+    }
+
+    .search-input-group input {
+        border: 1px solid var(--border-color) !important;
+        background: #ffffff !important;
+        border-radius: var(--radius-sm) !important;
+        padding: 12px 14px !important;
+        min-height: var(--touch-min) !important;
+        box-shadow: none !important;
+    }
+
+    .search-input-group .search-btn,
+    .search-input-group .mic-place-btn {
+        background: #f1f5f9 !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--radius-sm) !important;
+        padding: 10px 16px !important;
+        min-height: var(--touch-min) !important;
+        width: auto !important;
+        height: auto !important;
+        font-size: 0.95rem !important;
+    }
+
     .app-sidebar.collapsed .panel:first-child {
         display: block !important; /* Never collapse route search on desktop */
     }
@@ -688,6 +727,17 @@ label {
         flex-direction: column;
     }
 
+    /* Icon-only buttons on mobile */
+    .btn-text {
+        display: none !important;
+    }
+
+    .btn-icon {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
     .app-header {
         position: relative;
         z-index: 1200;
@@ -727,7 +777,7 @@ label {
         border-radius: 0 !important;
     }
 
-    /* Route Search Drawer: Collapsible floating card over map */
+    /* Route Search Drawer: Floating Google Maps-style Card */
     .app-sidebar {
         position: absolute;
         top: 8px;
@@ -742,12 +792,12 @@ label {
     .app-sidebar .panel {
         pointer-events: auto;
         margin: 0;
-        padding: 12px;
-        border-radius: var(--radius-md);
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+        padding: 10px 12px 10px;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
         background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(8px);
-        max-height: 75vh;
+        backdrop-filter: blur(12px);
+        max-height: 65vh;
         overflow-y: auto;
         transition: transform 0.25s ease, opacity 0.25s ease;
     }
@@ -756,7 +806,147 @@ label {
         display: none;
     }
 
-    /* Bottom Sheet Navigation Card */
+    .app-sidebar .field {
+        margin-bottom: 7px;
+    }
+
+    .app-sidebar label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        margin-bottom: 3px;
+        color: var(--text-muted);
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+    }
+
+    /* Google Maps Inspired Unified Pill */
+    .app-sidebar .search-input-group {
+        display: flex !important;
+        align-items: center !important;
+        background: #f8fafc !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 24px !important;
+        padding: 0 8px 0 10px !important;
+        height: 42px !important;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+        transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s !important;
+    }
+
+    .app-sidebar .search-input-group:focus-within {
+        background: #ffffff !important;
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 3px rgba(11, 95, 255, 0.15) !important;
+    }
+
+    /* Search button: only search icon on mobile, no text, seamlessly embedded */
+    .app-sidebar .search-input-group .search-btn {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 28px !important;
+        min-width: 28px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        color: #64748b;
+        font-size: 1.05rem !important;
+        cursor: pointer;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* Inner input: borderless inside the pill */
+    .app-sidebar .search-input-group input {
+        flex: 1 !important;
+        min-width: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 4px 8px !important;
+        height: 100% !important;
+        min-height: auto !important;
+        font-size: 0.88rem !important;
+        color: var(--text-main) !important;
+        outline: none !important;
+    }
+
+    /* Speak button: only mic icon on mobile, no text, seamlessly embedded */
+    .app-sidebar .search-input-group .mic-place-btn {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        color: var(--primary);
+        font-size: 1.15rem !important;
+        cursor: pointer;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50% !important;
+        flex-shrink: 0;
+        transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    .app-sidebar .search-input-group .mic-place-btn:active {
+        transform: scale(0.92);
+        background: rgba(11, 95, 255, 0.1) !important;
+    }
+
+    .app-sidebar .search-input-group .mic-place-btn.rec {
+        background: var(--danger) !important;
+        color: #ffffff !important;
+        animation: pulse 1s infinite alternate;
+    }
+
+    .app-sidebar select#mode {
+        min-height: 34px !important;
+        height: 34px !important;
+        padding: 4px 8px !important;
+        font-size: 0.84rem !important;
+        min-width: 80px !important;
+        border-radius: 18px !important;
+        background: #f1f5f9;
+        font-weight: 600;
+    }
+
+    .app-sidebar button#go {
+        min-height: 34px !important;
+        height: 34px !important;
+        padding: 4px 14px !important;
+        font-size: 0.88rem !important;
+        font-weight: 700 !important;
+        border-radius: 18px !important;
+        flex: 1;
+        background: var(--primary);
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(11, 95, 255, 0.35);
+    }
+
+    .app-sidebar .chosen {
+        font-size: 0.78rem;
+        margin-top: 2px;
+    }
+
+    .app-sidebar .results {
+        max-height: 120px;
+        margin-top: 3px;
+    }
+
+    .app-sidebar .results button {
+        padding: 6px 8px;
+        font-size: 0.82rem;
+        margin-top: 3px;
+    }
+
+    /* Bottom Sheet Navigation Card (Third Card) - Dragged down to reveal map */
     .mobile-bottom-sheet {
         position: absolute;
         bottom: 0;
@@ -764,56 +954,172 @@ label {
         right: 0;
         z-index: 800;
         background: #ffffff;
-        border-radius: 20px 20px 0 0;
-        box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.2);
-        padding: 14px 16px;
-        padding-bottom: max(16px, env(safe-area-inset-bottom));
-        max-height: 48vh;
+        border-radius: 18px 18px 0 0;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.16);
+        padding: 8px 12px 12px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+        max-height: 280px;
         overflow-y: auto;
         border-top: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
         transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
+    .mobile-bottom-sheet.expanded {
+        max-height: 80vh;
+    }
+
     .bottom-sheet-handle {
-        width: 38px;
+        order: 1;
+        width: 36px;
         height: 4px;
         background: #cbd5e1;
         border-radius: 4px;
-        margin: 0 auto 10px;
+        margin: 0 auto 6px;
         cursor: pointer;
-    }
-
-    .mobile-bottom-sheet.expanded {
-        max-height: 82vh;
+        flex-shrink: 0;
     }
 
     #nav-next {
-        font-size: 1.15rem;
+        order: 2;
+        font-size: 0.98rem;
+        font-weight: 700;
+        line-height: 1.3;
+        min-height: auto;
+        margin-bottom: 2px;
     }
 
-    .sim {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+    #nav-meta {
+        order: 3;
+        font-size: 0.8rem;
+        margin: 2px 0 4px;
+        min-height: auto;
+    }
+
+    .chat {
+        order: 4;
+        margin: 6px 0;
+        display: flex;
         gap: 6px;
+        align-items: center;
     }
 
-    .sim button {
-        min-width: 0;
-        padding: 10px;
-    }
-
-    .voice {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .voice select {
-        width: 100%;
+    #chat-input {
+        flex: 1;
+        min-height: 38px !important;
+        height: 38px !important;
+        font-size: 0.85rem !important;
+        padding: 4px 12px !important;
+        border-radius: 20px !important;
+        border: 1px solid var(--border-color) !important;
+        background: #f8fafc !important;
     }
 
     #mic-btn {
-        width: 100%;
-        min-height: 44px;
-        justify-content: center;
+        width: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+        height: 38px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: #f1f5f9 !important;
+        border: 1px solid var(--border-color) !important;
+        font-size: 1.1rem !important;
+        flex-shrink: 0;
+    }
+
+    #chat-send {
+        min-height: 38px !important;
+        height: 38px !important;
+        padding: 4px 14px !important;
+        font-size: 0.85rem !important;
+        border-radius: 20px !important;
+        font-weight: 700 !important;
+        background: var(--primary) !important;
+        color: #ffffff !important;
+        border: none !important;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    #chat-send .btn-text {
+        display: inline !important;
+    }
+
+    #chat-answer {
+        order: 5;
+        font-size: 0.85rem;
+        padding: 6px 10px;
+        margin-bottom: 4px;
+    }
+
+    #chat-answer:not(:empty) {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        color: #1e3a8a;
+    }
+
+    .voice {
+        order: 6;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 6px !important;
+        margin: 4px 0 !important;
+    }
+
+    /* Remove the random check sign on mobile */
+    .voice label {
+        display: none !important;
+    }
+
+    .voice select {
+        flex: 1;
+        width: 100% !important;
+        min-height: 34px !important;
+        height: 34px !important;
+        font-size: 0.82rem !important;
+        padding: 4px 8px !important;
+        border-radius: 8px !important;
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+    }
+
+    .sim {
+        order: 7;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin: 6px 0;
+    }
+
+    .sim button {
+        min-width: 0 !important;
+        min-height: 34px !important;
+        height: 34px !important;
+        padding: 6px 8px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+    }
+
+    .passenger-card-btn {
+        order: 8;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+        margin: 4px 0;
+        border-radius: 12px;
+    }
+
+    #voice-status {
+        order: 9;
+        font-size: 0.78rem;
     }
 }

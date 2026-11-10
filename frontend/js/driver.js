@@ -130,6 +130,10 @@ function setupSearch(type) {
     const results = $(`${type}-results`);
     const chosen = $(`${type}-chosen`);
 
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") searchBtn.click();
+    });
+
     searchBtn.addEventListener("click", async () => {
         const q = input.value.trim();
         if (q.length < 2) return;
@@ -210,7 +214,7 @@ async function checkReadyForPreview() {
             $("badge-traffic").className = "status-badge";
         }
 
-        $("route-preview").style.display = "flex";
+        $("route-preview").style.display = "grid";
         $("btn-start-drive").disabled = false;
         if ($("btn-sim-drive")) $("btn-sim-drive").disabled = false;
         $("setup-status").textContent = "Route ready. Tap START DRIVING or SIMULATE DRIVE.";
@@ -292,11 +296,13 @@ function updateHud(status) {
         }
     }
 
-    // 4. Remaining time & distance
+    // 4. Remaining time & distance with live calculated clock ETA
     const remKm = (status.remaining_m / 1000).toFixed(1);
     const remMin = Math.max(0, Math.round(status.remaining_s / 60));
+    const etaDate = new Date(Date.now() + (status.remaining_s || 0) * 1000);
+    const etaTimeStr = etaDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     $("hud-remaining-dist").textContent = `${remKm} km`;
-    $("hud-eta").textContent = `${remMin} min`;
+    $("hud-eta").textContent = `${remMin} min · ${etaTimeStr}`;
 
     // 5. GPS badge
     $("badge-gps").textContent = status.gps_quality === "ok" ? "GPS OK" : "POOR GPS";
@@ -564,6 +570,52 @@ $("btn-mute").addEventListener("click", () => {
 // Setup listeners
 setupSearch("from");
 setupSearch("to");
+
+// One-tap destination voice input for drivers
+let isMicSearching = false;
+let toMicTimeout = null;
+
+$("to-mic")?.addEventListener("click", async () => {
+    const micBtn = $("to-mic");
+    const toInput = $("to-input");
+    const chosen = $("to-chosen");
+
+    if (isMicSearching) {
+        clearTimeout(toMicTimeout);
+        isMicSearching = false;
+        micBtn.classList.remove("listening");
+        chosen.textContent = "Processing speech...";
+        try {
+            const rawBlob = await stopRecording();
+            const wav = await toWav16k(rawBlob);
+            const lang = $("driver-lang")?.value || "en";
+            const ttsLang = ttsCode(lang);
+            const { transcript } = await transcribe(wav, ttsLang);
+            if (transcript) {
+                toInput.value = transcript;
+                chosen.textContent = `Heard: "${transcript}"`;
+                $("to-search").click();
+            } else {
+                chosen.textContent = "Could not hear destination. Try again.";
+            }
+        } catch (e) {
+            chosen.textContent = "Voice input error.";
+        }
+        return;
+    }
+
+    try {
+        await startRecording();
+        isMicSearching = true;
+        micBtn.classList.add("listening");
+        chosen.textContent = "Listening for destination...";
+        toMicTimeout = setTimeout(() => {
+            if (isMicSearching) $("to-mic").click();
+        }, 6000);
+    } catch (e) {
+        chosen.textContent = "Could not access microphone.";
+    }
+});
 $("driver-lang")?.addEventListener("change", () => {
     if (startState.to) checkReadyForPreview();
 });

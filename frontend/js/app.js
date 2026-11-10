@@ -22,10 +22,10 @@ function handleAnnouncement(s) {
         currentTrackingSessionId = s.session_id;
         lastAnnouncementId = 0;
     }
-    if (s.guidance && $("nav-next")) {
-        $("nav-next").textContent = s.guidance.text;
-    } else if (s.next_text && $("nav-next")) {
-        $("nav-next").textContent = s.next_text;
+    const { navLang } = getSelectedLang();
+    const stepText = formatStepCountdown(s, navLang);
+    if (stepText && $("nav-next")) {
+        $("nav-next").textContent = stepText;
     }
     const a = s.announcement;
     if (!a || a.id <= lastAnnouncementId) return;
@@ -102,10 +102,57 @@ function distText(m) {
     return `${Math.round(m)} m`;
 }
 
+function formatStepCountdown(s, navLang) {
+    if (s.arrived) {
+        if (navLang === "kn") return "ನೀವು ತಲುಪಿದ್ದೀರಿ.";
+        if (navLang === "hi") return "आप अपनी मंज़िल पर पहुँच गए हैं।";
+        if (navLang === "hinglish") return "Aap apni manzil par pahunch gaye hain.";
+        return "You have arrived at your destination.";
+    }
+    if (!s.on_route) {
+        if (navLang === "kn") return "ದಾರಿಯಿಂದ ಹೊರಗಿದ್ದೀರಿ. ಹೊಸ ದಾರಿ ಹುಡುಕುತ್ತಿದ್ದೇವೆ...";
+        if (navLang === "hi") return "आप रास्ते से हट गए हैं। नया रास्ता ढूँढ रहे हैं...";
+        if (navLang === "hinglish") return "Aap route se hat gaye hain. Naya rasta dhoond rahe hain...";
+        return "You are off the route. Finding a new one...";
+    }
+    if (s.guidance && s.guidance.text) {
+        return s.guidance.text;
+    }
+    if (s.next_text) {
+        return s.next_text;
+    }
+    return "";
+}
+
+function formatDestinationMeta(s, navLang, accuracy = null) {
+    const remM = s.remaining_m;
+    const remMin = Math.max(1, Math.round(s.remaining_s / 60));
+    const dist = distText(remM);
+    let offRoute = "";
+    if (!s.on_route) {
+        offRoute = `, ${Math.round(s.distance_from_route_m)} m off route`;
+    }
+    let gpsAcc = "";
+    if (accuracy !== null && accuracy !== undefined) {
+        gpsAcc = ` (GPS ±${Math.round(accuracy)}m)`;
+    }
+
+    if (navLang === "hi") {
+        return `🏁 मंज़िल: ${dist} बाकी · लगभग ${remMin} मिनट${offRoute}${gpsAcc}`;
+    }
+    if (navLang === "hinglish") {
+        return `🏁 Manzil: ${dist} bacha hai · lagbhag ${remMin} min${offRoute}${gpsAcc}`;
+    }
+    if (navLang === "kn") {
+        return `🏁 ಗಮ್ಯಸ್ಥಾನ: ${dist} ಬಾಕಿ · ಸುಮಾರು ${remMin} ನಿಮಿಷ${offRoute}${gpsAcc}`;
+    }
+    return `🏁 Destination: ${dist} remaining · ~${remMin} min${offRoute}${gpsAcc}`;
+}
+
 function renderGuide(guide) {
     const scrollY = window.scrollY;
     const route = guide.route;
-    const mins = Math.round(route.duration_s / 60);
+    const mins = Math.max(1, Math.round(route.duration_s / 60));
     $("summary").textContent = `${distText(route.distance_m)}, about ${mins} min `;
     const note = document.createElement("span");
     note.className = "note";
@@ -115,6 +162,21 @@ function renderGuide(guide) {
     if (trafficAttr) {
         trafficAttr.style.display = (guide.traffic_status === "available" || route.traffic) ? "block" : "none";
     }
+
+    // Immediately show upcoming turn and destination meta in the card!
+    const { navLang } = getSelectedLang();
+    const firstStepText = guide.instructions[0]?.text || (route.steps[0] ? `Continue for ${distText(route.steps[0].distance_m)}` : "Route ready");
+    $("nav-next").textContent = firstStepText;
+    if (navLang === "hi") {
+        $("nav-meta").textContent = `🏁 मंज़िल: ${distText(route.distance_m)} बाकी · लगभग ${mins} मिनट`;
+    } else if (navLang === "hinglish") {
+        $("nav-meta").textContent = `🏁 Manzil: ${distText(route.distance_m)} bacha hai · lagbhag ${mins} min`;
+    } else if (navLang === "kn") {
+        $("nav-meta").textContent = `🏁 ಗಮ್ಯಸ್ಥಾನ: ${distText(route.distance_m)} ಬಾಕಿ · ಸುಮಾರು ${mins} ನಿಮಿಷ`;
+    } else {
+        $("nav-meta").textContent = `🏁 Destination: ${distText(route.distance_m)} remaining · ~${mins} min`;
+    }
+
     $("steps").textContent = "";
     guide.instructions.forEach((ins, idx) => {
         const li = document.createElement("li");
@@ -162,6 +224,9 @@ function getSelectedLang() {
 
 window.addEventListener("lang-changed", async () => {
     const { navLang } = getSelectedLang();
+    // Re-fetching creates a new route session; while sim/GPS is posting to the current
+    // session, swapping it would make chat answer from stale full-route totals.
+    if (state.sim || state.gps) return;
     if (state.guide && state.from && state.to) {
         try {
             const guide = await getGuide(
@@ -206,22 +271,9 @@ function runSim(wrong) {
         onTick: ({ lat, lon, status: s }) => {
             moveUser(lat, lon);
             const { navLang } = getSelectedLang();
-            if (s.guidance) {
-                $("nav-next").textContent = s.guidance.text;
-            } else if (s.next_text) {
-                $("nav-next").textContent = s.next_text;
-            } else if (!s.on_route) {
-                $("nav-next").textContent = navLang === "kn"
-                    ? "ದಾರಿಯಿಂದ ಹೊರಗಿದ್ದೀರಿ. ಹೊಸ ದಾರಿ ಹುಡುಕುತ್ತಿದ್ದೇವೆ..."
-                    : (navLang === "hi"
-                        ? "आप रास्ते से हट गए हैं। नया रास्ता ढूँढ रहे हैं..."
-                        : (navLang === "hinglish"
-                            ? "Aap route se hat gaye hain. Naya rasta dhoond rahe hain..."
-                            : "You are off the route. Finding a new one..."));
-            }
-            $("nav-meta").textContent =
-                `${distText(s.remaining_m)} left, about ${Math.round(s.remaining_s / 60)} min` +
-                (s.on_route ? "" : `, ${Math.round(s.distance_from_route_m)} m off route`);
+            const stepText = formatStepCountdown(s, navLang);
+            if (stepText) $("nav-next").textContent = stepText;
+            $("nav-meta").textContent = formatDestinationMeta(s, navLang);
 
             if (s.next_index !== null && s.next_index !== undefined) {
                 const prev = $("steps").querySelector(".active-step");
@@ -255,7 +307,12 @@ function runSim(wrong) {
                 ? "ನೀವು ತಲುಪಿದ್ದೀರಿ."
                 : (navLang === "hi"
                     ? "आप अपनी मंज़िल पर पहुँच गए हैं।"
-                    : (navLang === "hinglish" ? "Aap pahunch gaye." : "You have arrived."));
+                    : (navLang === "hinglish" ? "Aap apni manzil par pahunch gaye hain." : "You have arrived at your destination."));
+            $("nav-meta").textContent = navLang === "hi"
+                ? "🏁 मंज़िल पर पहुँच गए हैं"
+                : (navLang === "kn"
+                    ? "🏁 ಗಮ್ಯಸ್ಥಾನ ತಲುಪಿದ್ದೀರಿ"
+                    : (navLang === "hinglish" ? "🏁 Manzil par pahunch gaye" : "🏁 Arrived at destination"));
             state.sim = null;
             setSimButtons(false);
         },
@@ -290,23 +347,9 @@ function runLiveGps() {
         onTick: ({ lat, lon, status: s, accuracy }) => {
             moveUser(lat, lon);
             const { navLang } = getSelectedLang();
-            if (s.guidance) {
-                $("nav-next").textContent = s.guidance.text;
-            } else if (s.next_text) {
-                $("nav-next").textContent = s.next_text;
-            } else if (!s.on_route) {
-                $("nav-next").textContent = navLang === "kn"
-                    ? "ದಾರಿಯಿಂದ ಹೊರಗಿದ್ದೀರಿ. ಹೊಸ ದಾರಿ ಹುಡುಕುತ್ತಿದ್ದೇವೆ..."
-                    : (navLang === "hi"
-                        ? "आप रास्ते से हट गए हैं। नया रास्ता ढूँढ रहे हैं..."
-                        : (navLang === "hinglish"
-                            ? "Aap route se hat gaye hain. Naya rasta dhoond rahe hain..."
-                            : "You are off the route. Finding a new one..."));
-            }
-            $("nav-meta").textContent =
-                `${distText(s.remaining_m)} left, about ${Math.round(s.remaining_s / 60)} min` +
-                (s.on_route ? "" : `, ${Math.round(s.distance_from_route_m)} m off route`) +
-                ` (GPS ±${Math.round(accuracy)}m)`;
+            const stepText = formatStepCountdown(s, navLang);
+            if (stepText) $("nav-next").textContent = stepText;
+            $("nav-meta").textContent = formatDestinationMeta(s, navLang, accuracy);
 
             if (s.next_index !== null && s.next_index !== undefined) {
                 const prev = $("steps").querySelector(".active-step");
@@ -340,7 +383,12 @@ function runLiveGps() {
                 ? "ನೀವು ತಲುಪಿದ್ದೀರಿ."
                 : (navLang === "hi"
                     ? "आप अपनी मंज़िल पर पहुँच गए हैं।"
-                    : (navLang === "hinglish" ? "Aap pahunch gaye." : "You have arrived."));
+                    : (navLang === "hinglish" ? "Aap apni manzil par pahunch gaye hain." : "You have arrived at your destination."));
+            $("nav-meta").textContent = navLang === "hi"
+                ? "🏁 मंज़िल पर पहुँच गए हैं"
+                : (navLang === "kn"
+                    ? "🏁 ಗಮ್ಯಸ್ಥಾನ ತಲುಪಿದ್ದೀರಿ"
+                    : (navLang === "hinglish" ? "🏁 Manzil par pahunch gaye" : "🏁 Arrived at destination"));
             state.gps = null;
             setSimButtons(false);
         },
@@ -386,7 +434,8 @@ function closePassengerCard() {
 function speakToDriver() {
     if (!state.to) return;
     const knName = state.to.name_kn || state.to.name;
-    const phrase = `ನಮಸ್ಕಾರ, ನಾನು ${knName}ಗೆ ಹೋಗಬೇಕು.`;
+    // Suffix-free on purpose: appending case markers (e.g. "ಗೆ") to arbitrary names is often ungrammatical.
+    const phrase = `ನಮಸ್ಕಾರ, ದಯವಿಟ್ಟು ಇಲ್ಲಿಗೆ ಕರೆದುಕೊಂಡು ಹೋಗಿ: ${knName}.`;
     window.dispatchEvent(new CustomEvent("speak-text", {
         detail: { text: phrase, lang: "kn-IN" }
     }));
@@ -419,8 +468,6 @@ async function onGo() {
         state.guide = guide;
         drawRoute(guide.route, state.from, state.to);
         renderGuide(guide);
-        $("nav-next").textContent = guide.instructions[0]?.text || "";
-        $("nav-meta").textContent = "";
         $("passenger-card-btn").style.display = "inline-block";
         setSimButtons(false);
         status(guide.landmarks_status === "unavailable"
